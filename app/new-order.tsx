@@ -226,7 +226,7 @@ export default function NovaEncomendaScreen() {
           </View>
           {errors.weightKg ? <Text style={styles.errorText}>{errors.weightKg}</Text> : null}
 
-          <Text style={styles.label}>Preço total (R$)</Text>
+          <Text style={styles.label}>Preço total (€)</Text>
           <View style={styles.inputContainer}>
             <TextInput style={styles.input} placeholder="Ex: 150,00"
               placeholderTextColor={Colors.textSecondary}

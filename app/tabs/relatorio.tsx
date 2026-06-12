@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, ActivityIndicator, Platform } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getOrdersByMonth } from '../services/database';
-import { Colors, Spacing, BorderRadius, STATUSES } from '../constants/theme';
-import { Order } from '../constants/types';
+import { getOrdersByMonth } from '../../services/database';
+import { Colors, Spacing, BorderRadius, STATUSES } from '../../constants/theme';
+import { Order } from '../../constants/types';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -48,21 +48,11 @@ export default function RelatorioScreen() {
     color: Colors.channel?.[ch] ?? Colors.primary,
   }));
 
-  const formatMoney = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
+  const formatMoney = (v: number) => `€ ${v.toFixed(2).replace('.', ',')}`;
   const formatWeight = (v: number) => `${v.toFixed(1).replace('.', ',')} kg`;
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
-        
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Relatório Mensal</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Navegação de mês */}
       <View style={styles.navRow}>
         <Pressable onPress={() => navMes(-1)} hitSlop={12}>
           <Ionicons name="chevron-back" size={28} color={Colors.primary} />
@@ -78,7 +68,6 @@ export default function RelatorioScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
 
-          {/* Cards resumo */}
           <View style={styles.cardsRow}>
             <View style={styles.card}>
               <Text style={styles.cardIcon}>🎂</Text>
@@ -97,7 +86,6 @@ export default function RelatorioScreen() {
             </View>
           </View>
 
-          {/* Por status */}
           <Text style={styles.sectionTitle}>Por Status</Text>
           <View style={styles.section}>
             {porStatus.map(({ status, count, color }) => (
@@ -109,7 +97,6 @@ export default function RelatorioScreen() {
             ))}
           </View>
 
-          {/* Por canal */}
           <Text style={styles.sectionTitle}>Por Canal</Text>
           <View style={styles.section}>
             {porCanal.map(({ canal, count, color }) => (
@@ -121,7 +108,6 @@ export default function RelatorioScreen() {
             ))}
           </View>
 
-          {/* Lista de encomendas */}
           <Text style={styles.sectionTitle}>Encomendas do Mês</Text>
           {orders.length === 0 ? (
             <View style={styles.empty}>
@@ -152,8 +138,6 @@ export default function RelatorioScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, paddingTop: Platform.OS === 'android' ? Spacing.xl : Spacing.sm, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
   navTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   scroll: { padding: Spacing.md, paddingBottom: 60 },

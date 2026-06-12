@@ -13,21 +13,6 @@ import { printReceipt, printDirect } from '../../../services/receipt';
 
 const STATUS_ORDER = STATUSES;
 
-function getNextStatus(current: string | null | undefined): string | null {
-  const idx = STATUS_ORDER.indexOf(current as typeof STATUS_ORDER[number]);
-  if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
-  return STATUS_ORDER[idx + 1];
-}
-
-function getNextStatusLabel(current: string | null | undefined): string {
-  switch (current) {
-    case 'Pendente': return 'Iniciar Produção';
-    case 'Em Produção': return 'Marcar Concluída';
-    case 'Concluída': return 'Marcar Entregue';
-    default: return '';
-  }
-}
-
 function openContact(sourceChannel: string, clientPhone: string | null | undefined) {
   if (!clientPhone) { Alert.alert('Sem contato', 'Nenhum contato cadastrado.'); return; }
   if (sourceChannel === 'WhatsApp') {
@@ -41,7 +26,7 @@ function openContact(sourceChannel: string, clientPhone: string | null | undefin
 
 export default function DetalheEncomendaScreen() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
-  const { getOrderById, updateOrderStatus, deleteOrder } = useOrders();
+  const { getOrderById, deleteOrder } = useOrders();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -61,18 +46,6 @@ export default function DetalheEncomendaScreen() {
   }, [id, getOrderById]);
 
   useFocusEffect(useCallback(() => { loadOrder(); }, [loadOrder]));
-
-  const handleAdvanceStatus = async () => {
-    if (!order?.id) return;
-    const next = getNextStatus(order?.status);
-    if (!next) return;
-    try {
-      await updateOrderStatus(order.id, next);
-      setOrder(prev => prev ? { ...prev, status: next, updatedAt: new Date().toISOString() } : null);
-    } catch (e) {
-      Alert.alert('Erro', 'Não foi possível atualizar o status.');
-    }
-  };
 
   const handleDelete = () => {
     Alert.alert('Excluir encomenda', 'Tem certeza que deseja excluir esta encomenda?', [
@@ -103,12 +76,17 @@ export default function DetalheEncomendaScreen() {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts?.length !== 3) return dateStr;
-    return `$${parts[2]}/$${parts[1]}/${parts[0]}`;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
   const formatWeight = (w: number | null | undefined) => {
     if (w == null) return '0 kg';
     return `${String(w).replace('.', ',')} kg`;
+  };
+
+  const formatMoney = (v: number | null | undefined) => {
+    if (!v) return '';
+    return `€ ${v.toFixed(2).replace('.', ',')}`;
   };
 
   if (loading) {
@@ -140,8 +118,6 @@ export default function DetalheEncomendaScreen() {
     );
   }
 
-  const nextStatus = getNextStatus(order?.status);
-  const nextLabel = getNextStatusLabel(order?.status);
   const channelColor = Colors.channel?.[order?.sourceChannel ?? ''] ?? Colors.textSecondary;
   const currentStatusIdx = STATUS_ORDER.indexOf(order?.status as typeof STATUS_ORDER[number]);
 
@@ -160,7 +136,6 @@ export default function DetalheEncomendaScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Foto */}
         {order?.photoUri ? (
           <Pressable onPress={() => setImageModalVisible(true)}>
             <Image source={{ uri: order.photoUri }} style={styles.heroImage} resizeMode="cover" />
@@ -174,7 +149,6 @@ export default function DetalheEncomendaScreen() {
         <View style={styles.card}>
           <Text style={styles.clientName}>{order?.clientName ?? ''}</Text>
 
-          {/* Badge canal — clicável */}
           <Pressable
             style={[styles.channelBadge, { backgroundColor: channelColor + '20' }]}
             onPress={() => openContact(order?.sourceChannel ?? '', order?.clientPhone)}
@@ -211,6 +185,13 @@ export default function DetalheEncomendaScreen() {
             <Text style={styles.infoLabel}>Peso</Text>
             <Text style={styles.infoValue}>{formatWeight(order?.weightKg)}</Text>
           </View>
+          {order?.price ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>💰</Text>
+              <Text style={styles.infoLabel}>Preço</Text>
+              <Text style={[styles.infoValue, { color: Colors.primary }]}>{formatMoney(order.price)}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.divider} />
 
@@ -247,15 +228,6 @@ export default function DetalheEncomendaScreen() {
         </View>
 
         <View style={styles.actionsRow}>
-          {nextStatus ? (
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.actionPrimary, pressed && styles.actionPressed]}
-              onPress={handleAdvanceStatus}
-            >
-              <Ionicons name="arrow-forward" size={18} color={Colors.white} />
-              <Text style={styles.actionPrimaryText}>{nextLabel}</Text>
-            </Pressable>
-          ) : null}
           <Pressable
             style={({ pressed }) => [styles.actionBtn, styles.actionOutline, pressed && styles.actionPressed]}
             onPress={handleShare}
@@ -273,7 +245,6 @@ export default function DetalheEncomendaScreen() {
         </View>
       </ScrollView>
 
-      {/* Menu */}
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
           <View style={styles.menuSheet}>
@@ -289,7 +260,6 @@ export default function DetalheEncomendaScreen() {
         </Pressable>
       </Modal>
 
-      {/* Modal foto */}
       <Modal visible={imageModalVisible} transparent animationType="fade" onRequestClose={() => setImageModalVisible(false)}>
         <View style={styles.imageModalContainer}>
           <Pressable style={styles.imageModalClose} onPress={() => setImageModalVisible(false)}>
@@ -331,10 +301,8 @@ const styles = StyleSheet.create({
   notesText: { fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
   actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginHorizontal: Spacing.md, marginTop: Spacing.lg },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: BorderRadius.md },
-  actionPrimary: { backgroundColor: Colors.primary },
   actionOutline: { borderWidth: 2, borderColor: Colors.primary, backgroundColor: Colors.white },
   actionPressed: { transform: [{ scale: 0.97 }], opacity: 0.9 },
-  actionPrimaryText: { color: Colors.white, fontSize: 14, fontWeight: '700' },
   actionOutlineText: { color: Colors.primary, fontSize: 14, fontWeight: '700' },
   menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: Platform.OS === 'android' ? 80 : 100, paddingRight: Spacing.md },
   menuSheet: { backgroundColor: Colors.white, borderRadius: BorderRadius.md, paddingVertical: 4, minWidth: 160, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
