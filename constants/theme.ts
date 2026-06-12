@@ -49,8 +49,8 @@ export const Fonts = {
   bold: Platform.select({ ios: 'System', android: 'Roboto', default: 'Arial, sans-serif' }) ?? 'System',
 };
 
-export const CAKE_TYPES = ['Chocolate', 'Baunilha', 'Red Velvet', 'Cenoura', 'Coco', 'Limão'] as const;
-export const FILLINGS = ['Brigadeiro', 'Doce de Leite', 'Morango', 'Ninho', 'Nutella', 'Creme'] as const;
+export const CAKE_TYPES = ['Pao de Lo', 'Massa de Chocolate', 'Massa Red Velvet', 'Outros'] as const;
+export const FILLINGS = ['Brigadeiro Tradicional', 'Brigadeiro de Ninho', 'Brigadeiro Branco', 'Beijinho', 'Doce de Leite', 'Doce de Morango', 'Brigadeiro de Maracuja', 'Praline de Chocolate', 'Nutella', 'Chantilly', 'Ferrero', 'Oreo', 'Kinder Bueno', 'Kit Kat Crocante', 'Outros'] as const;
 export const CHANNELS = ['WhatsApp', 'Instagram'] as const;
 export const STATUSES = ['Pendente', 'Em Produção', 'Concluída', 'Entregue'] as const;
 export type OrderStatus = typeof STATUSES[number];

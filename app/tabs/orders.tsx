@@ -4,15 +4,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOrders } from '../../context/OrdersContext';
 import { OrderCard } from '../../components/OrderCard';
-import { Colors, Spacing, BorderRadius, STATUSES } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius } from '../../constants/theme';
 import { Order } from '../../constants/types';
 
-const FILTER_OPTIONS = ['Todas', ...STATUSES] as const;
 
 export default function EncomendasScreen() {
   const { searchOrders } = useOrders();
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todas');
   const [results, setResults] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -30,19 +28,15 @@ export default function EncomendasScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      doSearch(query, statusFilter);
-    }, [doSearch, query, statusFilter])
+      doSearch(query, "Todas");
+    }, [doSearch, query])
   );
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
-    doSearch(text, statusFilter);
+    doSearch(text, "Todas");
   };
 
-  const handleFilterChange = (filter: string) => {
-    setStatusFilter(filter);
-    doSearch(query, filter);
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -119,7 +113,7 @@ export default function EncomendasScreen() {
         }
         contentContainerStyle={styles.listContent}
         refreshing={loading}
-        onRefresh={() => doSearch(query, statusFilter)}
+        onRefresh={() => doSearch(query, "Todas")}
       />
 
       {/* FAB */}
