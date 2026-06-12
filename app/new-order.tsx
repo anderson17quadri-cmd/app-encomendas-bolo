@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TextInput, Pressable, Image,
   Alert, Platform, KeyboardAvoidingView, SafeAreaView,
 } from 'react-native';
-import { router, useLocalSearchParams, Stack } from 'expo-router';
+import { router, useLocalSearchParams, Stack, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { photoToBase64 } from '../services/photoStorage';
@@ -160,7 +160,13 @@ export default function NovaEncomendaScreen() {
             })}
           </View>
 
-          <Text style={styles.sectionTitle}>Detalhes do Bolo</Text>
+          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+            <Text style={styles.sectionTitle}>Detalhes do Bolo</Text>
+            <Pressable onPress={() => router.push('/gerir-sabores')} style={{flexDirection:'row',alignItems:'center',gap:4}}>
+              <Ionicons name="settings-outline" size={16} color={Colors.primary} />
+              <Text style={{color:Colors.primary,fontSize:13}}>Gerir sabores</Text>
+            </Pressable>
+          </View>
           <Text style={styles.label}>Tipo de massa *</Text>
           <Pressable style={styles.selectButton}
             onPress={() => setPickerModal({ field: 'cakeType', title: 'Tipo de Massa', options: CAKE_TYPES })}>
