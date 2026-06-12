@@ -1,100 +1,101 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, SafeAreaView, ActivityIndicator } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius, CAKE_TYPES, FILLINGS } from '../constants/theme';
+import { supabase } from '../services/supabase';
+import { Colors, Spacing, BorderRadius } from '../constants/theme';
+
+type Flavor = { id: string; type: string; name: string };
 
 export default function GerirSaboresScreen() {
-  const [massas, setMassas] = useState<string[]>([...CAKE_TYPES]);
-  const [recheios, setRecheios] = useState<string[]>([...FILLINGS]);
+  const [massas, setMassas] = useState<Flavor[]>([]);
+  const [recheios, setRecheios] = useState<Flavor[]>([]);
   const [novaMassa, setNovaMassa] = useState('');
   const [novoRecheio, setNovoRecheio] = useState('');
-  const [editando, setEditando] = useState<{tipo: 'massa'|'recheio', index: number, valor: string} | null>(null);
+  const [editando, setEditando] = useState<{id: string, valor: string} | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const adicionarMassa = () => {
-    if (!novaMassa.trim()) return;
-    setMassas([...massas, novaMassa.trim()]);
-    setNovaMassa('');
+  const carregar = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('flavors').select('*').order('name');
+    if (data) {
+      setMassas(data.filter(f => f.type === 'massa'));
+      setRecheios(data.filter(f => f.type === 'recheio'));
+    }
+    setLoading(false);
   };
 
-  const adicionarRecheio = () => {
-    if (!novoRecheio.trim()) return;
-    setRecheios([...recheios, novoRecheio.trim()]);
-    setNovoRecheio('');
+  useEffect(() => { carregar(); }, []);
+
+  const adicionar = async (tipo: string, nome: string, setNome: (v: string) => void) => {
+    if (!nome.trim()) return;
+    await supabase.from('flavors').insert({ type: tipo, name: nome.trim() });
+    setNome('');
+    carregar();
   };
 
-  const excluir = (tipo: 'massa'|'recheio', index: number) => {
-    Alert.alert('Excluir', 'Tem certeza?', [
+  const excluir = (id: string, nome: string) => {
+    Alert.alert('Excluir', `Excluir "${nome}"?`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => {
-        if (tipo === 'massa') setMassas(massas.filter((_, i) => i !== index));
-        else setRecheios(recheios.filter((_, i) => i !== index));
+      { text: 'Excluir', style: 'destructive', onPress: async () => {
+        await supabase.from('flavors').delete().eq('id', id);
+        carregar();
       }}
     ]);
   };
 
-  const salvarEdicao = () => {
+  const salvarEdicao = async () => {
     if (!editando || !editando.valor.trim()) return;
-    if (editando.tipo === 'massa') {
-      const novo = [...massas];
-      novo[editando.index] = editando.valor.trim();
-      setMassas(novo);
-    } else {
-      const novo = [...recheios];
-      novo[editando.index] = editando.valor.trim();
-      setRecheios(novo);
-    }
+    await supabase.from('flavors').update({ name: editando.valor.trim() }).eq('id', editando.id);
     setEditando(null);
+    carregar();
   };
 
-  const renderItem = (item: string, index: number, tipo: 'massa'|'recheio') => (
-    <View key={index} style={styles.item}>
-      {editando?.tipo === tipo && editando?.index === index ? (
-        <TextInput
-          style={styles.editInput}
-          value={editando.valor}
-          onChangeText={v => setEditando({...editando, valor: v})}
-          autoFocus
-        />
+  const renderItem = (item: Flavor, tipo: string) => (
+    <View key={item.id} style={styles.item}>
+      {editando?.id === item.id ? (
+        <TextInput style={styles.editInput} value={editando.valor} onChangeText={v => setEditando({...editando, valor: v})} autoFocus />
       ) : (
-        <Text style={styles.itemText}>{item}</Text>
+        <Text style={styles.itemText}>{item.name}</Text>
       )}
       <View style={styles.itemActions}>
-        {editando?.tipo === tipo && editando?.index === index ? (
+        {editando?.id === item.id ? (
           <Pressable onPress={salvarEdicao} style={styles.btnSave}>
-            <Ionicons name="checkmark" size={18} color={Colors.white} />
+            <Ionicons name="checkmark" size={18} color="#fff" />
           </Pressable>
         ) : (
-          <Pressable onPress={() => setEditando({tipo, index, valor: item})} style={styles.btnEdit}>
+          <Pressable onPress={() => setEditando({id: item.id, valor: item.name})} style={styles.btnEdit}>
             <Ionicons name="pencil" size={16} color={Colors.primary} />
           </Pressable>
         )}
-        <Pressable onPress={() => excluir(tipo, index)} style={styles.btnDelete}>
+        <Pressable onPress={() => excluir(item.id, item.name)} style={styles.btnDelete}>
           <Ionicons name="trash" size={16} color="#e74c3c" />
         </Pressable>
       </View>
     </View>
   );
 
+  if (loading) return <SafeAreaView style={styles.container}><ActivityIndicator size="large" color={Colors.primary} style={{marginTop: 40}} /></SafeAreaView>;
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ title: 'Gerir Sabores', headerBackTitle: 'Voltar' }} />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.sectionTitle}>🎂 Massas</Text>
-        {massas.map((m, i) => renderItem(m, i, 'massa'))}
+        {massas.map(m => renderItem(m, 'massa'))}
         <View style={styles.addRow}>
           <TextInput style={styles.addInput} placeholder="Nova massa..." value={novaMassa} onChangeText={setNovaMassa} />
-          <Pressable onPress={adicionarMassa} style={styles.btnAdd}>
-            <Ionicons name="add" size={22} color={Colors.white} />
+          <Pressable onPress={() => adicionar('massa', novaMassa, setNovaMassa)} style={styles.btnAdd}>
+            <Ionicons name="add" size={22} color="#fff" />
           </Pressable>
         </View>
 
         <Text style={[styles.sectionTitle, {marginTop: 24}]}>🍫 Recheios</Text>
-        {recheios.map((r, i) => renderItem(r, i, 'recheio'))}
+        {recheios.map(r => renderItem(r, 'recheio'))}
         <View style={styles.addRow}>
           <TextInput style={styles.addInput} placeholder="Novo recheio..." value={novoRecheio} onChangeText={setNovoRecheio} />
-          <Pressable onPress={adicionarRecheio} style={styles.btnAdd}>
-            <Ionicons name="add" size={22} color={Colors.white} />
+          <Pressable onPress={() => adicionar('recheio', novoRecheio, setNovoRecheio)} style={styles.btnAdd}>
+            <Ionicons name="add" size={22} color="#fff" />
           </Pressable>
         </View>
       </ScrollView>
@@ -116,5 +117,4 @@ const styles = StyleSheet.create({
   addRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   addInput: { flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.md, padding: 12, fontSize: 15, elevation: 1 },
   btnAdd: { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, padding: 12, justifyContent: 'center', alignItems: 'center' },
-  white: { color: '#fff' },
 });
