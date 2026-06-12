@@ -77,6 +77,5 @@
     "orval": "8.12.3",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
-  },
-  "packageManager": "yarn@4.13.0"
+  }
 }
