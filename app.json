@@ -48,12 +48,12 @@
       "@react-native-community/datetimepicker"
     ],
     "scheme": "abacusai1781173870",
+    "owner": "andersonquadri",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a52132e3-7b24-4c1b-9315-46625e580b8a"
+        "projectId": "642b5bf3-e871-442a-a94c-be605f12329a"
       }
-    },
-    "owner": "abacus.ai"
+    }
   }
 }

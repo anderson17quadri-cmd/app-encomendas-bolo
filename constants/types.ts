@@ -1,20 +1,21 @@
 export interface Order {
   id: string;
   clientName: string;
-  deliveryDate: string; // YYYY-MM-DD
+  clientPhone: string | null;
+  deliveryDate: string;
   cakeType: string;
   filling: string;
   weightKg: number;
   photoUri: string | null;
   sourceChannel: string;
   notes: string | null;
-  status: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface OrderFormData {
   clientName: string;
+  clientPhone: string;
   deliveryDate: string;
   cakeType: string;
   filling: string;
@@ -22,7 +23,6 @@ export interface OrderFormData {
   photoUri: string | null;
   sourceChannel: string;
   notes: string;
-  status: string;
 }
 
 export interface MarkedDates {
