@@ -18,7 +18,7 @@ function toRow(data: Partial<Order> & { id?: string; createdAt?: string; updated
     photo_uri: data.photoUri ?? null,
     source_channel: data.sourceChannel,
     notes: data.notes ?? null,
-    status: data.status ?? 'pending',
+    status: (data.status === 'Pendente' ? 'pending' : data.status === 'Em Produção' ? 'in_production' : data.status === 'Concluída' ? 'completed' : data.status === 'Entregue' ? 'delivered' : data.status ?? 'pending'),
     created_at: data.createdAt,
     updated_at: data.updatedAt,
   };
@@ -36,7 +36,7 @@ function fromRow(row: Record<string, unknown>): Order {
     photoUri: row.photo_uri as string | null,
     sourceChannel: row.source_channel as string,
     notes: row.notes as string | null,
-    status: row.status as string,
+    status: (row.status === 'pending' ? 'Pendente' : row.status === 'in_production' ? 'Em Produção' : row.status === 'completed' ? 'Concluída' : row.status === 'delivered' ? 'Entregue' : row.status) as string,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
