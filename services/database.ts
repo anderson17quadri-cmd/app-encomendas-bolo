@@ -58,24 +58,48 @@ export async function getOrderById(id: string): Promise<Order | null> {
 }
 
 export async function getOrdersByDate(date: string): Promise<Order[]> {
-  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('delivery_date', date)
+    .order('created_at', { ascending: true });
   if (error) { console.error('getOrdersByDate error:', error); return []; }
-  const all = (data ?? []).map(r => fromRow(r as Record<string, unknown>));
-  return all.filter(o => o.deliveryDate === date || o.deliveryDate?.startsWith(date));
+  return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
 }
 
 export async function getAllOrders(): Promise<Order[]> {
-  const { data, error } = await supabase.from('orders').select('*').order('delivery_date', { ascending: false });
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('delivery_date', { ascending: false });
   if (error) { console.error('getAllOrders error:', error); return []; }
   return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
 }
 
 export async function searchOrders(query: string, statusFilter?: string, dateFrom?: string, dateTo?: string): Promise<Order[]> {
-  const { data, error } = await supabase.from('orders').select('*').order('delivery_date', { ascending: false });
+  let q = supabase.from('orders').select('*').order('delivery_date', { ascending: false });
+
+  if (query?.trim()) {
+    q = q.ilike('client_name', `%${query.trim()}%`);
+  }
+
+  if (statusFilter && statusFilter !== 'Todas') {
+    const statusMap: Record<string, string> = {
+      'Pendente': 'pending',
+      'Em Produção': 'in_production',
+      'Concluída': 'completed',
+      'Entregue': 'delivered',
+    };
+    const dbStatus = statusMap[statusFilter];
+    if (dbStatus) q = q.eq('status', dbStatus);
+  }
+
+  if (dateFrom) q = q.gte('delivery_date', dateFrom);
+  if (dateTo) q = q.lte('delivery_date', dateTo);
+
+  const { data, error } = await q;
   if (error) { console.error('searchOrders error:', error); return []; }
-  let results = (data ?? []).map(r => fromRow(r as Record<string, unknown>));
-  if (query?.trim()) results = results.filter(o => o.clientName?.toLowerCase().includes(query.trim().toLowerCase()));
-  return results;
+  return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
 }
 
 export async function updateOrder(id: string, data: Partial<Omit<Order, 'id' | 'createdAt'>>): Promise<void> {
