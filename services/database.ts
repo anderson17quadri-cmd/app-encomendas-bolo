@@ -15,6 +15,7 @@ function toRow(data: Partial<Order> & { id?: string; createdAt?: string; updated
     cake_type: data.cakeType,
     filling: data.filling,
     weight_kg: data.weightKg,
+    price: data.price ?? 0,
     photo_uri: data.photoUri ?? null,
     source_channel: data.sourceChannel,
     notes: data.notes ?? null,
@@ -33,6 +34,7 @@ function fromRow(row: Record<string, unknown>): Order {
     cakeType: row.cake_type as string,
     filling: row.filling as string,
     weightKg: row.weight_kg as number,
+    price: (row.price as number) ?? 0,
     photoUri: row.photo_uri as string | null,
     sourceChannel: row.source_channel as string,
     notes: row.notes as string | null,
@@ -78,27 +80,33 @@ export async function getAllOrders(): Promise<Order[]> {
 
 export async function searchOrders(query: string, statusFilter?: string, dateFrom?: string, dateTo?: string): Promise<Order[]> {
   let q = supabase.from('orders').select('*').order('delivery_date', { ascending: false });
-
-  if (query?.trim()) {
-    q = q.ilike('client_name', `%${query.trim()}%`);
-  }
-
+  if (query?.trim()) q = q.ilike('client_name', `%${query.trim()}%`);
   if (statusFilter && statusFilter !== 'Todas') {
     const statusMap: Record<string, string> = {
-      'Pendente': 'pending',
-      'Em Produção': 'in_production',
-      'Concluída': 'completed',
-      'Entregue': 'delivered',
+      'Pendente': 'pending', 'Em Produção': 'in_production',
+      'Concluída': 'completed', 'Entregue': 'delivered',
     };
     const dbStatus = statusMap[statusFilter];
     if (dbStatus) q = q.eq('status', dbStatus);
   }
-
   if (dateFrom) q = q.gte('delivery_date', dateFrom);
   if (dateTo) q = q.lte('delivery_date', dateTo);
-
   const { data, error } = await q;
   if (error) { console.error('searchOrders error:', error); return []; }
+  return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
+}
+
+export async function getOrdersByMonth(year: number, month: number): Promise<Order[]> {
+  const from = `${year}-${String(month).padStart(2,'0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to = `${year}-${String(month).padStart(2,'0')}-${lastDay}`;
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .gte('delivery_date', from)
+    .lte('delivery_date', to)
+    .order('delivery_date', { ascending: true });
+  if (error) { console.error('getOrdersByMonth error:', error); return []; }
   return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
 }
 

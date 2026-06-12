@@ -7,7 +7,6 @@ import { Platform } from 'react-native';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-
   return (
     <Tabs
       screenOptions={{
@@ -41,6 +40,15 @@ export default function TabsLayout() {
           title: 'Encomendas',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="relatorio"
+        options={{
+          title: 'Relatório',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bar-chart" size={size} color={color} />
           ),
         }}
       />

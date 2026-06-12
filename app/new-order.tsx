@@ -57,6 +57,7 @@ export default function NovaEncomendaScreen() {
     photoUri: null,
     sourceChannel: 'WhatsApp',
     notes: '',
+    price: '',
   });
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export default function NovaEncomendaScreen() {
         photoUri: form.photoUri ? (await photoToBase64(form.photoUri) ?? null) : null,
         sourceChannel: form.sourceChannel,
         notes: form.notes?.trim() || null,
+        price: parseFloat((form.price || '0').replace(',', '.')) || 0,
       });
       router.back();
     } catch (e) {
@@ -223,6 +225,13 @@ export default function NovaEncomendaScreen() {
               value={form.weightKg} onChangeText={(t) => updateField('weightKg', t)} keyboardType="decimal-pad" />
           </View>
           {errors.weightKg ? <Text style={styles.errorText}>{errors.weightKg}</Text> : null}
+
+          <Text style={styles.label}>Preço total (R$)</Text>
+          <View style={styles.inputContainer}>
+            <TextInput style={styles.input} placeholder="Ex: 150,00"
+              placeholderTextColor={Colors.textSecondary}
+              value={form.price} onChangeText={(t) => updateField('price', t)} keyboardType="decimal-pad" />
+          </View>
 
           <Text style={styles.sectionTitle}>Entrega</Text>
           <Text style={styles.label}>Data de entrega *</Text>

@@ -6,9 +6,11 @@ export interface Order {
   cakeType: string;
   filling: string;
   weightKg: number;
+  price: number;
   photoUri: string | null;
   sourceChannel: string;
   notes: string | null;
+  status: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +22,7 @@ export interface OrderFormData {
   cakeType: string;
   filling: string;
   weightKg: string;
+  price: string;
   photoUri: string | null;
   sourceChannel: string;
   notes: string;
