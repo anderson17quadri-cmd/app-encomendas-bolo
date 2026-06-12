@@ -62,38 +62,6 @@ export default function EncomendasScreen() {
         ) : null}
       </View>
 
-      {/* Filter chips */}
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={FILTER_OPTIONS as unknown as string[]}
-        keyExtractor={(item) => item}
-        contentContainerStyle={styles.filtersContainer}
-        renderItem={({ item }) => {
-          const isActive = item === statusFilter;
-          const chipColor = item === 'Todas' ? Colors.primary : (Colors.status?.[item] ?? Colors.textSecondary);
-          return (
-            <Pressable
-              style={[
-                styles.filterChip,
-                isActive && { backgroundColor: chipColor },
-                !isActive && { backgroundColor: chipColor + '20', borderColor: chipColor, borderWidth: 1 },
-              ]}
-              onPress={() => handleFilterChange(item)}
-              accessibilityLabel={`Filtrar por ${item}`}
-              accessibilityRole="button"
-            >
-              <Text style={[
-                styles.filterText,
-                isActive && { color: Colors.white },
-                !isActive && { color: chipColor },
-              ]}>
-                {item}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
 
       {/* Order list */}
       <FlatList
