@@ -124,9 +124,6 @@ export default function CalendarioScreen() {
               <Text style={styles.sectionTitle}>
                 Encomendas do dia — {formatDatePtBr(selectedDate)}
               </Text>
-              <Text style={styles.sectionCount}>
-                {dayOrders?.length ?? 0} {(dayOrders?.length ?? 0) === 1 ? 'encomenda' : 'encomendas'}
-              </Text>
             </View>
           </View>
         }
