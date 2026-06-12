@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, Pressable, Image,
-  Alert, Platform, KeyboardAvoidingView, SafeAreaView,
+  Alert, Platform, KeyboardAvoidingView, SafeAreaView, ActivityIndicator,
 } from 'react-native';
-import { router, useLocalSearchParams, Stack, Link } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { photoToBase64 } from '../services/photoStorage';
+import { supabase } from '../services/supabase';
 import { useOrders } from '../context/OrdersContext';
 import { PickerModal } from '../components/PickerModal';
-import { Colors, Spacing, BorderRadius, CAKE_TYPES, FILLINGS, CHANNELS } from '../constants/theme';
+import { Colors, Spacing, BorderRadius, CHANNELS } from '../constants/theme';
 import { OrderFormData } from '../constants/types';
 
 export default function NovaEncomendaScreen() {
   const { date = '' } = useLocalSearchParams<{ date?: string }>();
   const { createOrder } = useOrders();
+
+  const [cakeTypes, setCakeTypes] = useState<string[]>([]);
+  const [fillings, setFillings] = useState<string[]>([]);
+  const [loadingFlavors, setLoadingFlavors] = useState(true);
+
+  useEffect(() => {
+    const fetchFlavors = async () => {
+      setLoadingFlavors(true);
+      const { data } = await supabase.from('flavors').select('*').order('name');
+      if (data) {
+        setCakeTypes(data.filter(f => f.type === 'massa').map(f => f.name));
+        setFillings(data.filter(f => f.type === 'recheio').map(f => f.name));
+      }
+      setLoadingFlavors(false);
+    };
+    fetchFlavors();
+  }, []);
 
   const parseInitialDate = (d: string) => {
     if (!d) return { dia: '', mes: '', ano: '' };
@@ -33,16 +51,26 @@ export default function NovaEncomendaScreen() {
     clientName: '',
     clientPhone: '',
     deliveryDate: '',
-    cakeType: CAKE_TYPES[0],
-    filling: FILLINGS[0],
+    cakeType: '',
+    filling: '',
     weightKg: '',
     photoUri: null,
     sourceChannel: 'WhatsApp',
     notes: '',
   });
+
+  useEffect(() => {
+    if (cakeTypes.length > 0 && !form.cakeType) {
+      setForm(prev => ({ ...prev, cakeType: cakeTypes[0] }));
+    }
+    if (fillings.length > 0 && !form.filling) {
+      setForm(prev => ({ ...prev, filling: fillings[0] }));
+    }
+  }, [cakeTypes, fillings]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [pickerModal, setPickerModal] = useState<{ field: string; title: string; options: readonly string[] } | null>(null);
+  const [pickerModal, setPickerModal] = useState<{ field: string; title: string; options: string[] } | null>(null);
 
   const updateField = (field: keyof OrderFormData, value: string | null) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -52,7 +80,6 @@ export default function NovaEncomendaScreen() {
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!form.clientName.trim()) newErrors.clientName = 'Nome do cliente é obrigatório';
-
     const diaNum = parseInt(dia);
     const mesNum = parseInt(mes);
     const anoNum = parseInt(ano);
@@ -60,7 +87,6 @@ export default function NovaEncomendaScreen() {
         diaNum < 1 || diaNum > 31 || mesNum < 1 || mesNum > 12 || anoNum < 2024) {
       newErrors.deliveryDate = 'Data inválida';
     }
-
     const weight = parseFloat(form.weightKg.replace(',', '.'));
     if (!form.weightKg.trim() || isNaN(weight) || weight < 0.1) newErrors.weightKg = 'Peso mínimo: 0,1 kg';
     setErrors(newErrors);
@@ -75,14 +101,14 @@ export default function NovaEncomendaScreen() {
       const weight = parseFloat(form.weightKg.replace(',', '.'));
       await createOrder({
         clientName: form.clientName.trim(),
-        clientPhone: form.clientPhone.trim() || null,
+        clientPhone: form.clientPhone?.trim() || null,
         deliveryDate,
         cakeType: form.cakeType,
         filling: form.filling,
         weightKg: weight,
         photoUri: form.photoUri ? (await photoToBase64(form.photoUri) ?? null) : null,
         sourceChannel: form.sourceChannel,
-        notes: form.notes.trim() || null,
+        notes: form.notes?.trim() || null,
       });
       router.back();
     } catch (e) {
@@ -113,6 +139,14 @@ export default function NovaEncomendaScreen() {
       { text: 'Escolher da galeria', onPress: () => pickImage(false) },
     ]);
   };
+
+  if (loadingFlavors) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -160,24 +194,25 @@ export default function NovaEncomendaScreen() {
             })}
           </View>
 
-          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <Text style={styles.sectionTitle}>Detalhes do Bolo</Text>
-            <Pressable onPress={() => router.push('/gerir-sabores')} style={{flexDirection:'row',alignItems:'center',gap:4}}>
+            <Pressable onPress={() => router.push('/gerir-sabores')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="settings-outline" size={16} color={Colors.primary} />
-              <Text style={{color:Colors.primary,fontSize:13}}>Gerir sabores</Text>
+              <Text style={{ color: Colors.primary, fontSize: 13 }}>Gerir sabores</Text>
             </Pressable>
           </View>
+
           <Text style={styles.label}>Tipo de massa *</Text>
           <Pressable style={styles.selectButton}
-            onPress={() => setPickerModal({ field: 'cakeType', title: 'Tipo de Massa', options: CAKE_TYPES })}>
-            <Text style={styles.selectText}>{form.cakeType}</Text>
+            onPress={() => setPickerModal({ field: 'cakeType', title: 'Tipo de Massa', options: cakeTypes })}>
+            <Text style={styles.selectText}>{form.cakeType || 'Selecionar...'}</Text>
             <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
           </Pressable>
 
           <Text style={styles.label}>Recheio *</Text>
           <Pressable style={styles.selectButton}
-            onPress={() => setPickerModal({ field: 'filling', title: 'Recheio', options: FILLINGS })}>
-            <Text style={styles.selectText}>{form.filling}</Text>
+            onPress={() => setPickerModal({ field: 'filling', title: 'Recheio', options: fillings })}>
+            <Text style={styles.selectText}>{form.filling || 'Selecionar...'}</Text>
             <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
           </Pressable>
 
@@ -242,6 +277,7 @@ export default function NovaEncomendaScreen() {
             onPress={handleSave} disabled={saving}>
             <Text style={styles.saveButtonText}>{saving ? 'Salvando...' : 'Salvar Encomenda'}</Text>
           </Pressable>
+
         </ScrollView>
       </KeyboardAvoidingView>
 
