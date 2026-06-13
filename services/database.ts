@@ -12,9 +12,12 @@ function toRow(data: Partial<Order> & { id?: string; createdAt?: string; updated
     client_name: data.clientName,
     client_phone: data.clientPhone ?? null,
     delivery_date: data.deliveryDate,
-    cake_type: data.cakeType,
-    filling: data.filling,
-    weight_kg: data.weightKg,
+    order_type: data.orderType ?? 'bolo',
+    cake_type: data.cakeType ?? '',
+    filling: data.filling ?? '',
+    weight_kg: data.weightKg ?? 0,
+    salgados: data.salgados ?? {},
+    brigadeiros: data.brigadeiros ?? {},
     price: data.price ?? 0,
     photo_uri: data.photoUri ?? null,
     source_channel: data.sourceChannel,
@@ -31,9 +34,12 @@ function fromRow(row: Record<string, unknown>): Order {
     clientName: row.client_name as string,
     clientPhone: row.client_phone as string | null,
     deliveryDate: row.delivery_date as string,
-    cakeType: row.cake_type as string,
-    filling: row.filling as string,
-    weightKg: row.weight_kg as number,
+    orderType: (row.order_type as string) ?? 'bolo',
+    cakeType: (row.cake_type as string) ?? '',
+    filling: (row.filling as string) ?? '',
+    weightKg: (row.weight_kg as number) ?? 0,
+    salgados: (row.salgados as Record<string, number>) ?? {},
+    brigadeiros: (row.brigadeiros as Record<string, number>) ?? {},
     price: (row.price as number) ?? 0,
     photoUri: row.photo_uri as string | null,
     sourceChannel: row.source_channel as string,
@@ -61,9 +67,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
 
 export async function getOrdersByDate(date: string): Promise<Order[]> {
   const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('delivery_date', date)
+    .from('orders').select('*').eq('delivery_date', date)
     .order('created_at', { ascending: true });
   if (error) { console.error('getOrdersByDate error:', error); return []; }
   return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
@@ -71,9 +75,7 @@ export async function getOrdersByDate(date: string): Promise<Order[]> {
 
 export async function getAllOrders(): Promise<Order[]> {
   const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .order('delivery_date', { ascending: false });
+    .from('orders').select('*').order('delivery_date', { ascending: false });
   if (error) { console.error('getAllOrders error:', error); return []; }
   return (data ?? []).map(r => fromRow(r as Record<string, unknown>));
 }
@@ -101,10 +103,8 @@ export async function getOrdersByMonth(year: number, month: number): Promise<Ord
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${String(month).padStart(2,'0')}-${lastDay}`;
   const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .gte('delivery_date', from)
-    .lte('delivery_date', to)
+    .from('orders').select('*')
+    .gte('delivery_date', from).lte('delivery_date', to)
     .order('delivery_date', { ascending: true });
   if (error) { console.error('getOrdersByMonth error:', error); return []; }
   return (data ?? []).map(r => fromRow(r as Record<string, unknown>));

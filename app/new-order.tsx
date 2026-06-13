@@ -11,7 +11,34 @@ import { supabase } from '../services/supabase';
 import { useOrders } from '../context/OrdersContext';
 import { PickerModal } from '../components/PickerModal';
 import { Colors, Spacing, BorderRadius, CHANNELS } from '../constants/theme';
-import { OrderFormData } from '../constants/types';
+import { OrderFormData, SalgadosQty, BrigadeirosQty } from '../constants/types';
+
+const SALGADOS_LIST = [
+  { key: 'coxinha', label: 'Coxinha', icon: '🍗', sub: '' },
+  { key: 'rissoisCarne', label: 'Rissóis de Carne', icon: '🥟', sub: '' },
+  { key: 'rissoisMistos', label: 'Rissóis Mistos', icon: '🥟', sub: '' },
+  { key: 'bolinhsQueijo', label: 'Bolinhas de Queijo', icon: '🧀', sub: '' },
+  { key: 'pastelFrango', label: 'Pastel de Frango', icon: '🫓', sub: '' },
+  { key: 'pastelCarne', label: 'Pastel de Carne', icon: '🫓', sub: '' },
+  { key: 'pastelPizza', label: 'Pastel de Pizza', icon: '🫓', sub: 'Misto' },
+  { key: 'enroladinho', label: 'Enroladinho de Salsicha', icon: '🌭', sub: '' },
+  { key: 'pastelBacalhau', label: 'Pastel de Bacalhau', icon: '🐟', sub: '' },
+];
+
+const BRIGADEIROS_LIST = [
+  { key: 'tradicional', label: 'Tradicional', icon: '🍫' },
+  { key: 'beijinho', label: 'Beijinho', icon: '🤍' },
+  { key: 'morango', label: 'Morango', icon: '🍓' },
+  { key: 'ninho', label: 'Ninho', icon: '🥛' },
+  { key: 'churros', label: 'Churros', icon: '🍬' },
+  { key: 'sensacao', label: 'Sensação', icon: '✨' },
+  { key: 'seducao', label: 'Sedução', icon: '💜' },
+  { key: 'casadinho', label: 'Casadinho', icon: '🤎' },
+  { key: 'prestigio', label: 'Prestígio', icon: '🖤' },
+  { key: 'oreo', label: 'Oreo', icon: '⚫' },
+  { key: 'napolitano', label: 'Napolitano', icon: '🍦' },
+  { key: 'cafe', label: 'Café', icon: '☕' },
+];
 
 export default function NovaEncomendaScreen() {
   const { date = '' } = useLocalSearchParams<{ date?: string }>();
@@ -20,6 +47,7 @@ export default function NovaEncomendaScreen() {
   const [cakeTypes, setCakeTypes] = useState<string[]>([]);
   const [fillings, setFillings] = useState<string[]>([]);
   const [loadingFlavors, setLoadingFlavors] = useState(true);
+  const [orderType, setOrderType] = useState<'bolo' | 'salgados' | 'brigadeiros'>('bolo');
 
   useEffect(() => {
     const fetchFlavors = async () => {
@@ -42,22 +70,18 @@ export default function NovaEncomendaScreen() {
   };
 
   const initial = parseInitialDate(typeof date === 'string' ? date : '');
-
   const [dia, setDia] = useState(initial.dia);
   const [mes, setMes] = useState(initial.mes);
   const [ano, setAno] = useState(initial.ano);
 
+  const [salgados, setSalgados] = useState<SalgadosQty>({});
+  const [brigadeiros, setBrigadeiros] = useState<BrigadeirosQty>({});
+
   const [form, setForm] = useState<OrderFormData>({
-    clientName: '',
-    clientPhone: '',
-    deliveryDate: '',
-    cakeType: '',
-    filling: '',
-    weightKg: '',
-    photoUri: null,
-    sourceChannel: 'WhatsApp',
-    notes: '',
-    price: '',
+    clientName: '', clientPhone: '', deliveryDate: '',
+    orderType: 'bolo', cakeType: '', filling: '',
+    weightKg: '', salgados: {}, brigadeiros: {},
+    price: '', photoUri: null, sourceChannel: 'WhatsApp', notes: '',
   });
 
   useEffect(() => {
@@ -78,6 +102,22 @@ export default function NovaEncomendaScreen() {
     if (errors[field]) setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
   };
 
+  const updateSalgado = (key: string, dir: number) => {
+    setSalgados(prev => {
+      const cur = (prev as Record<string, number>)[key] ?? 0;
+      const next = Math.max(0, cur + dir);
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const updateBrigadeiro = (key: string, dir: number) => {
+    setBrigadeiros(prev => {
+      const cur = (prev as Record<string, number>)[key] ?? 0;
+      const next = Math.max(0, cur + dir);
+      return { ...prev, [key]: next };
+    });
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!form.clientName.trim()) newErrors.clientName = 'Nome do cliente é obrigatório';
@@ -88,8 +128,10 @@ export default function NovaEncomendaScreen() {
         diaNum < 1 || diaNum > 31 || mesNum < 1 || mesNum > 12 || anoNum < 2024) {
       newErrors.deliveryDate = 'Data inválida';
     }
-    const weight = parseFloat(form.weightKg.replace(',', '.'));
-    if (!form.weightKg.trim() || isNaN(weight) || weight < 0.1) newErrors.weightKg = 'Peso mínimo: 0,1 kg';
+    if (orderType === 'bolo') {
+      const weight = parseFloat(form.weightKg.replace(',', '.'));
+      if (!form.weightKg.trim() || isNaN(weight) || weight < 0.1) newErrors.weightKg = 'Peso mínimo: 0,1 kg';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -99,18 +141,22 @@ export default function NovaEncomendaScreen() {
     try {
       setSaving(true);
       const deliveryDate = `${ano.padStart(4,'0')}-${mes.padStart(2,'0')}-${dia.padStart(2,'0')}`;
-      const weight = parseFloat(form.weightKg.replace(',', '.'));
+      const weight = orderType === 'bolo' ? parseFloat(form.weightKg.replace(',', '.')) : 0;
       await createOrder({
         clientName: form.clientName.trim(),
         clientPhone: form.clientPhone?.trim() || null,
         deliveryDate,
-        cakeType: form.cakeType,
-        filling: form.filling,
+        orderType,
+        cakeType: orderType === 'bolo' ? form.cakeType : '',
+        filling: orderType === 'bolo' ? form.filling : '',
         weightKg: weight,
+        salgados: orderType === 'salgados' ? salgados : {},
+        brigadeiros: orderType === 'brigadeiros' ? brigadeiros : {},
+        price: parseFloat((form.price || '0').replace(',', '.')) || 0,
         photoUri: form.photoUri ? (await photoToBase64(form.photoUri) ?? null) : null,
         sourceChannel: form.sourceChannel,
         notes: form.notes?.trim() || null,
-        price: parseFloat((form.price || '0').replace(',', '.')) || 0,
+        status: 'Pendente',
       });
       router.back();
     } catch (e) {
@@ -196,39 +242,106 @@ export default function NovaEncomendaScreen() {
             })}
           </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <Text style={styles.sectionTitle}>Detalhes do Bolo</Text>
-            <Pressable onPress={() => router.push('/gerir-sabores')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="settings-outline" size={16} color={Colors.primary} />
-              <Text style={{ color: Colors.primary, fontSize: 13 }}>Gerir sabores</Text>
-            </Pressable>
+          <Text style={styles.sectionTitle}>Tipo de Encomenda</Text>
+          <View style={styles.tipoRow}>
+            {[
+              { key: 'bolo', icon: '🎂', label: 'Bolo' },
+              { key: 'salgados', icon: '🥟', label: 'Salgados' },
+              { key: 'brigadeiros', icon: '🍫', label: 'Brigadeiros' },
+            ].map(t => (
+              <Pressable key={t.key}
+                style={[styles.tipoBtn, orderType === t.key && styles.tipoBtnActive]}
+                onPress={() => setOrderType(t.key as typeof orderType)}>
+                <Text style={styles.tipoIcon}>{t.icon}</Text>
+                <Text style={[styles.tipoLabel, orderType === t.key && styles.tipoLabelActive]}>{t.label}</Text>
+              </Pressable>
+            ))}
           </View>
 
-          <Text style={styles.label}>Tipo de massa *</Text>
-          <Pressable style={styles.selectButton}
-            onPress={() => setPickerModal({ field: 'cakeType', title: 'Tipo de Massa', options: cakeTypes })}>
-            <Text style={styles.selectText}>{form.cakeType || 'Selecionar...'}</Text>
-            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
-          </Pressable>
+          {/* ── BOLO ── */}
+          {orderType === 'bolo' && (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: Spacing.lg }}>
+                <Text style={styles.sectionTitle}>Detalhes do Bolo</Text>
+                <Pressable onPress={() => router.push('/gerir-sabores')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="settings-outline" size={16} color={Colors.primary} />
+                  <Text style={{ color: Colors.primary, fontSize: 13 }}>Gerir sabores</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.label}>Tipo de massa *</Text>
+              <Pressable style={styles.selectButton}
+                onPress={() => setPickerModal({ field: 'cakeType', title: 'Tipo de Massa', options: cakeTypes })}>
+                <Text style={styles.selectText}>{form.cakeType || 'Selecionar...'}</Text>
+                <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+              </Pressable>
+              <Text style={styles.label}>Recheio *</Text>
+              <Pressable style={styles.selectButton}
+                onPress={() => setPickerModal({ field: 'filling', title: 'Recheio', options: fillings })}>
+                <Text style={styles.selectText}>{form.filling || 'Selecionar...'}</Text>
+                <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+              </Pressable>
+              <Text style={styles.label}>Peso (kg) *</Text>
+              <View style={[styles.inputContainer, errors.weightKg ? styles.inputError : null]}>
+                <TextInput style={styles.input} placeholder="Ex: 2,5"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={form.weightKg} onChangeText={(t) => updateField('weightKg', t)} keyboardType="decimal-pad" />
+              </View>
+              {errors.weightKg ? <Text style={styles.errorText}>{errors.weightKg}</Text> : null}
+            </>
+          )}
 
-          <Text style={styles.label}>Recheio *</Text>
-          <Pressable style={styles.selectButton}
-            onPress={() => setPickerModal({ field: 'filling', title: 'Recheio', options: fillings })}>
-            <Text style={styles.selectText}>{form.filling || 'Selecionar...'}</Text>
-            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
-          </Pressable>
+          {/* ── SALGADOS ── */}
+          {orderType === 'salgados' && (
+            <>
+              <Text style={styles.sectionTitle}>Salgados — Quantidade</Text>
+              {SALGADOS_LIST.map(item => (
+                <View key={item.key} style={styles.qtyRow}>
+                  <Text style={styles.qtyIcon}>{item.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.qtyLabel}>{item.label}</Text>
+                    {item.sub ? <Text style={styles.qtySub}>{item.sub}</Text> : null}
+                  </View>
+                  <View style={styles.qtyCtrl}>
+                    <Pressable style={styles.qtyBtn} onPress={() => updateSalgado(item.key, -1)}>
+                      <Text style={styles.qtyBtnText}>−</Text>
+                    </Pressable>
+                    <Text style={styles.qtyVal}>{(salgados as Record<string, number>)[item.key] ?? 0}</Text>
+                    <Pressable style={styles.qtyBtn} onPress={() => updateSalgado(item.key, 1)}>
+                      <Text style={styles.qtyBtnText}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
 
-          <Text style={styles.label}>Peso (kg) *</Text>
-          <View style={[styles.inputContainer, errors.weightKg ? styles.inputError : null]}>
-            <TextInput style={styles.input} placeholder="Ex: 2,5"
-              placeholderTextColor={Colors.textSecondary}
-              value={form.weightKg} onChangeText={(t) => updateField('weightKg', t)} keyboardType="decimal-pad" />
-          </View>
-          {errors.weightKg ? <Text style={styles.errorText}>{errors.weightKg}</Text> : null}
+          {/* ── BRIGADEIROS ── */}
+          {orderType === 'brigadeiros' && (
+            <>
+              <Text style={styles.sectionTitle}>Brigadeiros — Quantidade</Text>
+              {BRIGADEIROS_LIST.map(item => (
+                <View key={item.key} style={styles.qtyRow}>
+                  <Text style={styles.qtyIcon}>{item.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.qtyLabel}>{item.label}</Text>
+                  </View>
+                  <View style={styles.qtyCtrl}>
+                    <Pressable style={styles.qtyBtn} onPress={() => updateBrigadeiro(item.key, -1)}>
+                      <Text style={styles.qtyBtnText}>−</Text>
+                    </Pressable>
+                    <Text style={styles.qtyVal}>{(brigadeiros as Record<string, number>)[item.key] ?? 0}</Text>
+                    <Pressable style={styles.qtyBtn} onPress={() => updateBrigadeiro(item.key, 1)}>
+                      <Text style={styles.qtyBtnText}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
 
           <Text style={styles.label}>Preço total (€)</Text>
           <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Ex: 150,00"
+            <TextInput style={styles.input} placeholder="Ex: 45,00"
               placeholderTextColor={Colors.textSecondary}
               value={form.price} onChangeText={(t) => updateField('price', t)} keyboardType="decimal-pad" />
           </View>
@@ -318,6 +431,20 @@ const styles = StyleSheet.create({
   channelRow: { flexDirection: 'row', gap: Spacing.sm },
   channelButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2, flex: 1, justifyContent: 'center' },
   channelButtonText: { fontSize: 14, fontWeight: '700' },
+  tipoRow: { flexDirection: 'row', gap: Spacing.sm },
+  tipoBtn: { flex: 1, paddingVertical: 14, paddingHorizontal: 8, borderRadius: BorderRadius.md, borderWidth: 2, borderColor: Colors.border, backgroundColor: Colors.white, alignItems: 'center', gap: 6 },
+  tipoBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.secondary },
+  tipoIcon: { fontSize: 28 },
+  tipoLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, textAlign: 'center' },
+  tipoLabelActive: { color: Colors.primary },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, padding: 12, marginBottom: 8, gap: 10 },
+  qtyIcon: { fontSize: 22, width: 32 },
+  qtyLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  qtySub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  qtyCtrl: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  qtyBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.secondary, justifyContent: 'center', alignItems: 'center' },
+  qtyBtnText: { fontSize: 20, fontWeight: '700', color: Colors.primary, lineHeight: 24 },
+  qtyVal: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, minWidth: 28, textAlign: 'center' },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dateBox: { backgroundColor: Colors.white, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, width: 64, height: 48, justifyContent: 'center' },
   dateBoxYear: { width: 90 },

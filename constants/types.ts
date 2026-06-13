@@ -1,11 +1,41 @@
+export interface SalgadosQty {
+  coxinha?: number;
+  rissoisCarne?: number;
+  rissoisMistos?: number;
+  bolinhsQueijo?: number;
+  pastelFrango?: number;
+  pastelCarne?: number;
+  pastelPizza?: number;
+  enroladinho?: number;
+  pastelBacalhau?: number;
+}
+
+export interface BrigadeirosQty {
+  tradicional?: number;
+  beijinho?: number;
+  morango?: number;
+  ninho?: number;
+  churros?: number;
+  sensacao?: number;
+  seducao?: number;
+  casadinho?: number;
+  prestigio?: number;
+  oreo?: number;
+  napolitano?: number;
+  cafe?: number;
+}
+
 export interface Order {
   id: string;
   clientName: string;
   clientPhone: string | null;
   deliveryDate: string;
+  orderType: string;
   cakeType: string;
   filling: string;
   weightKg: number;
+  salgados: SalgadosQty;
+  brigadeiros: BrigadeirosQty;
   price: number;
   photoUri: string | null;
   sourceChannel: string;
@@ -19,9 +49,12 @@ export interface OrderFormData {
   clientName: string;
   clientPhone: string;
   deliveryDate: string;
+  orderType: string;
   cakeType: string;
   filling: string;
   weightKg: string;
+  salgados: SalgadosQty;
+  brigadeiros: BrigadeirosQty;
   price: string;
   photoUri: string | null;
   sourceChannel: string;
