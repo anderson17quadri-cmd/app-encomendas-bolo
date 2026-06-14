@@ -14,15 +14,15 @@ import { Colors, Spacing, BorderRadius, CHANNELS } from '../constants/theme';
 import { OrderFormData, SalgadosQty, BrigadeirosQty } from '../constants/types';
 
 const SALGADOS_LIST = [
-  { key: 'coxinha', label: 'Coxinha', icon: '🍗', sub: '' },
-  { key: 'rissoisCarne', label: 'Rissóis de Carne', icon: '🥟', sub: '' },
-  { key: 'rissoisMistos', label: 'Rissóis Mistos', icon: '🥟', sub: '' },
-  { key: 'bolinhsQueijo', label: 'Bolinhas de Queijo', icon: '🧀', sub: '' },
-  { key: 'pastelFrango', label: 'Pastel de Frango', icon: '🫓', sub: '' },
-  { key: 'pastelCarne', label: 'Pastel de Carne', icon: '🫓', sub: '' },
-  { key: 'pastelPizza', label: 'Pastel de Pizza', icon: '🫓', sub: 'Misto' },
-  { key: 'enroladinho', label: 'Enroladinho de Salsicha', icon: '🌭', sub: '' },
-  { key: 'pastelBacalhau', label: 'Pastel de Bacalhau', icon: '🐟', sub: '' },
+  { key: 'coxinha', label: 'Coxinha', icon: '🍗' },
+  { key: 'rissoisCarne', label: 'Rissóis de Carne', icon: '🥟' },
+  { key: 'rissoisMistos', label: 'Rissóis Mistos', icon: '🥟' },
+  { key: 'bolinhsQueijo', label: 'Bolinhas de Queijo', icon: '🧀' },
+  { key: 'pastelFrango', label: 'Pastel de Frango', icon: '🫓' },
+  { key: 'pastelCarne', label: 'Pastel de Carne', icon: '🫓' },
+  { key: 'pastelPizza', label: 'Pastel de Pizza', icon: '🫓' },
+  { key: 'enroladinho', label: 'Enroladinho de Salsicha', icon: '🌭' },
+  { key: 'pastelBacalhau', label: 'Pastel de Bacalhau', icon: '🐟' },
 ];
 
 const BRIGADEIROS_LIST = [
@@ -40,6 +40,8 @@ const BRIGADEIROS_LIST = [
   { key: 'cafe', label: 'Café', icon: '☕' },
 ];
 
+const TOPPER_OPTIONS = ['Sem topper', 'Topper personalizado', 'Hóstia comestível', 'Topper + Hóstia'];
+
 export default function NovaEncomendaScreen() {
   const { date = '' } = useLocalSearchParams<{ date?: string }>();
   const { createOrder } = useOrders();
@@ -47,15 +49,17 @@ export default function NovaEncomendaScreen() {
   const [cakeTypes, setCakeTypes] = useState<string[]>([]);
   const [fillings, setFillings] = useState<string[]>([]);
   const [loadingFlavors, setLoadingFlavors] = useState(true);
-  const [orderType, setOrderType] = useState<'bolo' | 'salgados' | 'brigadeiros'>('bolo');
+  const [orderType, setOrderType] = useState<'bolo' | 'salgados' | 'brigadeiros' | 'especial'>('bolo');
+  const [salgados, setSalgados] = useState<SalgadosQty>({});
+  const [brigadeiros, setBrigadeiros] = useState<BrigadeirosQty>({});
 
   useEffect(() => {
     const fetchFlavors = async () => {
       setLoadingFlavors(true);
       const { data } = await supabase.from('flavors').select('*').order('name');
       if (data) {
-        setCakeTypes(data.filter(f => f.type === 'massa').map(f => f.name));
-        setFillings(data.filter(f => f.type === 'recheio').map(f => f.name));
+        setCakeTypes(data.filter((f: any) => f.type === 'massa').map((f: any) => f.name));
+        setFillings(data.filter((f: any) => f.type === 'recheio').map((f: any) => f.name));
       }
       setLoadingFlavors(false);
     };
@@ -74,23 +78,17 @@ export default function NovaEncomendaScreen() {
   const [mes, setMes] = useState(initial.mes);
   const [ano, setAno] = useState(initial.ano);
 
-  const [salgados, setSalgados] = useState<SalgadosQty>({});
-  const [brigadeiros, setBrigadeiros] = useState<BrigadeirosQty>({});
-
   const [form, setForm] = useState<OrderFormData>({
     clientName: '', clientPhone: '', deliveryDate: '',
     orderType: 'bolo', cakeType: '', filling: '',
-    weightKg: '', salgados: {}, brigadeiros: {},
+    weightKg: '', topper: 'Sem topper', hostia: '',
+    especial: '', salgados: {}, brigadeiros: {},
     price: '', photoUri: null, sourceChannel: 'WhatsApp', notes: '',
   });
 
   useEffect(() => {
-    if (cakeTypes.length > 0 && !form.cakeType) {
-      setForm(prev => ({ ...prev, cakeType: cakeTypes[0] }));
-    }
-    if (fillings.length > 0 && !form.filling) {
-      setForm(prev => ({ ...prev, filling: fillings[0] }));
-    }
+    if (cakeTypes.length > 0 && !form.cakeType) setForm(prev => ({ ...prev, cakeType: cakeTypes[0] }));
+    if (fillings.length > 0 && !form.filling) setForm(prev => ({ ...prev, filling: fillings[0] }));
   }, [cakeTypes, fillings]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,25 +103,21 @@ export default function NovaEncomendaScreen() {
   const updateSalgado = (key: string, dir: number) => {
     setSalgados(prev => {
       const cur = (prev as Record<string, number>)[key] ?? 0;
-      const next = Math.max(0, cur + dir);
-      return { ...prev, [key]: next };
+      return { ...prev, [key]: Math.max(0, cur + dir) };
     });
   };
 
   const updateBrigadeiro = (key: string, dir: number) => {
     setBrigadeiros(prev => {
       const cur = (prev as Record<string, number>)[key] ?? 0;
-      const next = Math.max(0, cur + dir);
-      return { ...prev, [key]: next };
+      return { ...prev, [key]: Math.max(0, cur + dir) };
     });
   };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!form.clientName.trim()) newErrors.clientName = 'Nome do cliente é obrigatório';
-    const diaNum = parseInt(dia);
-    const mesNum = parseInt(mes);
-    const anoNum = parseInt(ano);
+    const diaNum = parseInt(dia), mesNum = parseInt(mes), anoNum = parseInt(ano);
     if (!dia || !mes || !ano || isNaN(diaNum) || isNaN(mesNum) || isNaN(anoNum) ||
         diaNum < 1 || diaNum > 31 || mesNum < 1 || mesNum > 12 || anoNum < 2024) {
       newErrors.deliveryDate = 'Data inválida';
@@ -131,6 +125,9 @@ export default function NovaEncomendaScreen() {
     if (orderType === 'bolo') {
       const weight = parseFloat(form.weightKg.replace(',', '.'));
       if (!form.weightKg.trim() || isNaN(weight) || weight < 0.1) newErrors.weightKg = 'Peso mínimo: 0,1 kg';
+    }
+    if (orderType === 'especial' && !form.especial.trim()) {
+      newErrors.especial = 'Descreve a encomenda especial';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -142,6 +139,16 @@ export default function NovaEncomendaScreen() {
       setSaving(true);
       const deliveryDate = `${ano.padStart(4,'0')}-${mes.padStart(2,'0')}-${dia.padStart(2,'0')}`;
       const weight = orderType === 'bolo' ? parseFloat(form.weightKg.replace(',', '.')) : 0;
+
+      let photoUri: string | null = null;
+      if (form.photoUri) {
+        try {
+          photoUri = await photoToBase64(form.photoUri) ?? null;
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+        }
+      }
+
       await createOrder({
         clientName: form.clientName.trim(),
         clientPhone: form.clientPhone?.trim() || null,
@@ -150,10 +157,13 @@ export default function NovaEncomendaScreen() {
         cakeType: orderType === 'bolo' ? form.cakeType : '',
         filling: orderType === 'bolo' ? form.filling : '',
         weightKg: weight,
+        topper: orderType === 'bolo' && form.topper !== 'Sem topper' ? form.topper : null,
+        hostia: orderType === 'bolo' && form.hostia.trim() ? form.hostia.trim() : null,
+        especial: orderType === 'especial' ? form.especial.trim() : null,
         salgados: orderType === 'salgados' ? salgados : {},
         brigadeiros: orderType === 'brigadeiros' ? brigadeiros : {},
         price: parseFloat((form.price || '0').replace(',', '.')) || 0,
-        photoUri: form.photoUri ? (await photoToBase64(form.photoUri) ?? null) : null,
+        photoUri,
         sourceChannel: form.sourceChannel,
         notes: form.notes?.trim() || null,
         status: 'Pendente',
@@ -180,14 +190,6 @@ export default function NovaEncomendaScreen() {
     } catch (e) { console.error(e); }
   };
 
-  const showImageOptions = () => {
-    Alert.alert('Adicionar foto', 'Escolha uma opção', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Tirar foto', onPress: () => pickImage(true) },
-      { text: 'Escolher da galeria', onPress: () => pickImage(false) },
-    ]);
-  };
-
   if (loadingFlavors) {
     return (
       <SafeAreaView style={styles.container}>
@@ -195,6 +197,13 @@ export default function NovaEncomendaScreen() {
       </SafeAreaView>
     );
   }
+
+  const TIPOS = [
+    { key: 'bolo', icon: '🎂', label: 'Bolo' },
+    { key: 'salgados', icon: '🥟', label: 'Salgados' },
+    { key: 'brigadeiros', icon: '🍫', label: 'Brigadeiros' },
+    { key: 'especial', icon: '⭐', label: 'Especial' },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -216,19 +225,19 @@ export default function NovaEncomendaScreen() {
           <View style={[styles.inputContainer, errors.clientName ? styles.inputError : null]}>
             <TextInput style={styles.input} placeholder="Nome do cliente *"
               placeholderTextColor={Colors.textSecondary}
-              value={form.clientName} onChangeText={(t) => updateField('clientName', t)} />
+              value={form.clientName} onChangeText={t => updateField('clientName', t)} />
           </View>
           {errors.clientName ? <Text style={styles.errorText}>{errors.clientName}</Text> : null}
 
           <View style={[styles.inputContainer, { marginTop: Spacing.sm }]}>
             <TextInput style={styles.input} placeholder="Número WhatsApp ou @Instagram"
               placeholderTextColor={Colors.textSecondary}
-              value={form.clientPhone} onChangeText={(t) => updateField('clientPhone', t)} />
+              value={form.clientPhone} onChangeText={t => updateField('clientPhone', t)} />
           </View>
 
           <Text style={styles.label}>Canal de origem</Text>
           <View style={styles.channelRow}>
-            {CHANNELS.map((ch) => {
+            {CHANNELS.map(ch => {
               const isActive = form.sourceChannel === ch;
               const chColor = Colors.channel?.[ch] ?? Colors.primary;
               return (
@@ -244,11 +253,7 @@ export default function NovaEncomendaScreen() {
 
           <Text style={styles.sectionTitle}>Tipo de Encomenda</Text>
           <View style={styles.tipoRow}>
-            {[
-              { key: 'bolo', icon: '🎂', label: 'Bolo' },
-              { key: 'salgados', icon: '🥟', label: 'Salgados' },
-              { key: 'brigadeiros', icon: '🍫', label: 'Brigadeiros' },
-            ].map(t => (
+            {TIPOS.map(t => (
               <Pressable key={t.key}
                 style={[styles.tipoBtn, orderType === t.key && styles.tipoBtnActive]}
                 onPress={() => setOrderType(t.key as typeof orderType)}>
@@ -261,7 +266,7 @@ export default function NovaEncomendaScreen() {
           {/* ── BOLO ── */}
           {orderType === 'bolo' && (
             <>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: Spacing.lg }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.sm }}>
                 <Text style={styles.sectionTitle}>Detalhes do Bolo</Text>
                 <Pressable onPress={() => router.push('/gerir-sabores')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Ionicons name="settings-outline" size={16} color={Colors.primary} />
@@ -284,9 +289,23 @@ export default function NovaEncomendaScreen() {
               <View style={[styles.inputContainer, errors.weightKg ? styles.inputError : null]}>
                 <TextInput style={styles.input} placeholder="Ex: 2,5"
                   placeholderTextColor={Colors.textSecondary}
-                  value={form.weightKg} onChangeText={(t) => updateField('weightKg', t)} keyboardType="decimal-pad" />
+                  value={form.weightKg} onChangeText={t => updateField('weightKg', t)} keyboardType="decimal-pad" />
               </View>
               {errors.weightKg ? <Text style={styles.errorText}>{errors.weightKg}</Text> : null}
+
+              <Text style={styles.label}>Topper / Hóstia</Text>
+              <Pressable style={styles.selectButton}
+                onPress={() => setPickerModal({ field: 'topper', title: 'Topper / Hóstia', options: TOPPER_OPTIONS })}>
+                <Text style={styles.selectText}>{form.topper || 'Sem topper'}</Text>
+                <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+              </Pressable>
+              {form.topper && form.topper !== 'Sem topper' && (
+                <View style={[styles.inputContainer, { marginTop: Spacing.sm }]}>
+                  <TextInput style={styles.input} placeholder="Descreve o topper/hóstia (ex: nome, tema...)"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={form.hostia} onChangeText={t => updateField('hostia', t)} />
+                </View>
+              )}
             </>
           )}
 
@@ -297,10 +316,7 @@ export default function NovaEncomendaScreen() {
               {SALGADOS_LIST.map(item => (
                 <View key={item.key} style={styles.qtyRow}>
                   <Text style={styles.qtyIcon}>{item.icon}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.qtyLabel}>{item.label}</Text>
-                    {item.sub ? <Text style={styles.qtySub}>{item.sub}</Text> : null}
-                  </View>
+                  <Text style={styles.qtyLabel}>{item.label}</Text>
                   <View style={styles.qtyCtrl}>
                     <Pressable style={styles.qtyBtn} onPress={() => updateSalgado(item.key, -1)}>
                       <Text style={styles.qtyBtnText}>−</Text>
@@ -322,9 +338,7 @@ export default function NovaEncomendaScreen() {
               {BRIGADEIROS_LIST.map(item => (
                 <View key={item.key} style={styles.qtyRow}>
                   <Text style={styles.qtyIcon}>{item.icon}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.qtyLabel}>{item.label}</Text>
-                  </View>
+                  <Text style={styles.qtyLabel}>{item.label}</Text>
                   <View style={styles.qtyCtrl}>
                     <Pressable style={styles.qtyBtn} onPress={() => updateBrigadeiro(item.key, -1)}>
                       <Text style={styles.qtyBtnText}>−</Text>
@@ -339,11 +353,28 @@ export default function NovaEncomendaScreen() {
             </>
           )}
 
+          {/* ── ESPECIAL ── */}
+          {orderType === 'especial' && (
+            <>
+              <Text style={styles.sectionTitle}>Encomenda Especial ⭐</Text>
+              <View style={[styles.inputContainer, errors.especial ? styles.inputError : null]}>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Descreve a encomenda especial...&#10;Ex: Mesa de doces, bolo esculpido, kit festa..."
+                  placeholderTextColor={Colors.textSecondary}
+                  value={form.especial}
+                  onChangeText={t => updateField('especial', t)}
+                  multiline numberOfLines={5} textAlignVertical="top" />
+              </View>
+              {errors.especial ? <Text style={styles.errorText}>{errors.especial}</Text> : null}
+            </>
+          )}
+
           <Text style={styles.label}>Preço total (€)</Text>
           <View style={styles.inputContainer}>
             <TextInput style={styles.input} placeholder="Ex: 45,00"
               placeholderTextColor={Colors.textSecondary}
-              value={form.price} onChangeText={(t) => updateField('price', t)} keyboardType="decimal-pad" />
+              value={form.price} onChangeText={t => updateField('price', t)} keyboardType="decimal-pad" />
           </View>
 
           <Text style={styles.sectionTitle}>Entrega</Text>
@@ -352,21 +383,21 @@ export default function NovaEncomendaScreen() {
             <View style={[styles.dateBox, errors.deliveryDate ? styles.inputError : null]}>
               <TextInput style={styles.dateInput} placeholder="DD"
                 placeholderTextColor={Colors.textSecondary}
-                value={dia} onChangeText={(t) => setDia(t.replace(/\D/g,'').slice(0,2))}
+                value={dia} onChangeText={t => setDia(t.replace(/\D/g,'').slice(0,2))}
                 keyboardType="numeric" maxLength={2} textAlign="center" />
             </View>
             <Text style={styles.dateSep}>/</Text>
             <View style={[styles.dateBox, errors.deliveryDate ? styles.inputError : null]}>
               <TextInput style={styles.dateInput} placeholder="MM"
                 placeholderTextColor={Colors.textSecondary}
-                value={mes} onChangeText={(t) => setMes(t.replace(/\D/g,'').slice(0,2))}
+                value={mes} onChangeText={t => setMes(t.replace(/\D/g,'').slice(0,2))}
                 keyboardType="numeric" maxLength={2} textAlign="center" />
             </View>
             <Text style={styles.dateSep}>/</Text>
             <View style={[styles.dateBox, styles.dateBoxYear, errors.deliveryDate ? styles.inputError : null]}>
               <TextInput style={styles.dateInput} placeholder="AAAA"
                 placeholderTextColor={Colors.textSecondary}
-                value={ano} onChangeText={(t) => setAno(t.replace(/\D/g,'').slice(0,4))}
+                value={ano} onChangeText={t => setAno(t.replace(/\D/g,'').slice(0,4))}
                 keyboardType="numeric" maxLength={4} textAlign="center" />
             </View>
           </View>
@@ -381,9 +412,14 @@ export default function NovaEncomendaScreen() {
               </Pressable>
             </View>
           ) : (
-            <Pressable style={styles.photoPlaceholder} onPress={showImageOptions}>
+            <Pressable style={styles.photoPlaceholder}
+              onPress={() => Alert.alert('Adicionar foto', 'Escolha uma opção', [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Tirar foto', onPress: () => pickImage(true) },
+                { text: 'Escolher da galeria', onPress: () => pickImage(false) },
+              ])}>
               <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
-              <Text style={styles.photoPlaceholderText}>Adicionar foto</Text>
+              <Text style={styles.photoPlaceholderText}>Adicionar foto (opcional)</Text>
             </Pressable>
           )}
 
@@ -391,7 +427,7 @@ export default function NovaEncomendaScreen() {
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, styles.textArea]} placeholder="Observações adicionais..."
               placeholderTextColor={Colors.textSecondary} value={form.notes}
-              onChangeText={(t) => updateField('notes', t)} multiline numberOfLines={4} textAlignVertical="top" />
+              onChangeText={t => updateField('notes', t)} multiline numberOfLines={4} textAlignVertical="top" />
           </View>
 
           <Pressable
@@ -406,7 +442,7 @@ export default function NovaEncomendaScreen() {
       {pickerModal ? (
         <PickerModal visible={!!pickerModal} title={pickerModal.title} options={pickerModal.options}
           selected={(form as unknown as Record<string, string>)[pickerModal.field] ?? ''}
-          onSelect={(val) => updateField(pickerModal.field as keyof OrderFormData, val)}
+          onSelect={val => updateField(pickerModal.field as keyof OrderFormData, val)}
           onClose={() => setPickerModal(null)} />
       ) : null}
     </SafeAreaView>
@@ -431,16 +467,15 @@ const styles = StyleSheet.create({
   channelRow: { flexDirection: 'row', gap: Spacing.sm },
   channelButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2, flex: 1, justifyContent: 'center' },
   channelButtonText: { fontSize: 14, fontWeight: '700' },
-  tipoRow: { flexDirection: 'row', gap: Spacing.sm },
-  tipoBtn: { flex: 1, paddingVertical: 14, paddingHorizontal: 8, borderRadius: BorderRadius.md, borderWidth: 2, borderColor: Colors.border, backgroundColor: Colors.white, alignItems: 'center', gap: 6 },
+  tipoRow: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'nowrap' },
+  tipoBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 4, borderRadius: BorderRadius.md, borderWidth: 2, borderColor: Colors.border, backgroundColor: Colors.white, alignItems: 'center', gap: 4 },
   tipoBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.secondary },
-  tipoIcon: { fontSize: 28 },
-  tipoLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, textAlign: 'center' },
+  tipoIcon: { fontSize: 24 },
+  tipoLabel: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, textAlign: 'center' },
   tipoLabelActive: { color: Colors.primary },
   qtyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, padding: 12, marginBottom: 8, gap: 10 },
   qtyIcon: { fontSize: 22, width: 32 },
-  qtyLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-  qtySub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  qtyLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   qtyCtrl: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   qtyBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.secondary, justifyContent: 'center', alignItems: 'center' },
   qtyBtnText: { fontSize: 20, fontWeight: '700', color: Colors.primary, lineHeight: 24 },

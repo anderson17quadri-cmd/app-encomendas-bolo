@@ -34,6 +34,9 @@ export interface Order {
   cakeType: string;
   filling: string;
   weightKg: number;
+  topper: string | null;
+  hostia: string | null;
+  especial: string | null;
   salgados: SalgadosQty;
   brigadeiros: BrigadeirosQty;
   price: number;
@@ -53,6 +56,9 @@ export interface OrderFormData {
   cakeType: string;
   filling: string;
   weightKg: string;
+  topper: string;
+  hostia: string;
+  especial: string;
   salgados: SalgadosQty;
   brigadeiros: BrigadeirosQty;
   price: string;
