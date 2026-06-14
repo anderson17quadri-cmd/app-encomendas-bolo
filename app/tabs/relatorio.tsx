@@ -1,12 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getOrdersByMonth } from '../../services/database';
-import { Colors, Spacing, BorderRadius, STATUSES } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius } from '../../constants/theme';
 import { Order } from '../../constants/types';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function getOrderSubtitle(o: Order): string {
+  if (o.orderType === 'salgados') {
+    const total = Object.values(o.salgados ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+    return `🥟 Salgados • ${total} unid.`;
+  }
+  if (o.orderType === 'brigadeiros') {
+    const total = Object.values(o.brigadeiros ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+    return `🍫 Brigadeiros • ${total} unid.`;
+  }
+  return `🎂 ${o.cakeType ?? ''} • ${o.weightKg ?? 0}kg`;
+}
 
 export default function RelatorioScreen() {
   const today = new Date();
@@ -35,12 +47,6 @@ export default function RelatorioScreen() {
 
   const totalReceita = orders.reduce((acc, o) => acc + (o.price ?? 0), 0);
   const totalPeso = orders.reduce((acc, o) => acc + (o.weightKg ?? 0), 0);
-
-  const porStatus = STATUSES.map(s => ({
-    status: s,
-    count: orders.filter(o => o.status === s).length,
-    color: Colors.status?.[s] ?? Colors.primary,
-  }));
 
   const porCanal = ['WhatsApp', 'Instagram'].map(ch => ({
     canal: ch,
@@ -75,7 +81,7 @@ export default function RelatorioScreen() {
               <Text style={styles.cardLabel}>Encomendas</Text>
             </View>
             <View style={styles.card}>
-              <Text style={styles.cardIcon}>💰</Text>
+              <Text style={styles.cardIcon}>💶</Text>
               <Text style={styles.cardValue}>{formatMoney(totalReceita)}</Text>
               <Text style={styles.cardLabel}>Receita Total</Text>
             </View>
@@ -84,17 +90,6 @@ export default function RelatorioScreen() {
               <Text style={styles.cardValue}>{formatWeight(totalPeso)}</Text>
               <Text style={styles.cardLabel}>Peso Total</Text>
             </View>
-          </View>
-
-          <Text style={styles.sectionTitle}>Por Status</Text>
-          <View style={styles.section}>
-            {porStatus.map(({ status, count, color }) => (
-              <View key={status} style={styles.row}>
-                <View style={[styles.dot, { backgroundColor: color }]} />
-                <Text style={styles.rowLabel}>{status}</Text>
-                <Text style={styles.rowValue}>{count}</Text>
-              </View>
-            ))}
           </View>
 
           <Text style={styles.sectionTitle}>Por Canal</Text>
@@ -119,7 +114,7 @@ export default function RelatorioScreen() {
                 <Pressable key={o.id} style={styles.orderRow} onPress={() => router.push(`/order/${o.id}`)}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.orderName}>{o.clientName}</Text>
-                    <Text style={styles.orderSub}>{o.cakeType} • {o.weightKg}kg</Text>
+                    <Text style={styles.orderSub}>{getOrderSubtitle(o)}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.orderPrice}>{formatMoney(o.price ?? 0)}</Text>
@@ -149,7 +144,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm, marginTop: Spacing.md },
   section: { backgroundColor: Colors.white, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  dot: { width: 12, height: 12, borderRadius: 6 },
   rowLabel: { flex: 1, fontSize: 14, color: Colors.textPrimary },
   rowValue: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   orderRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
