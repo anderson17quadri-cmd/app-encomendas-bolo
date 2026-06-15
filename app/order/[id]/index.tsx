@@ -290,7 +290,7 @@ export default function DetalheEncomendaScreen() {
           <Pressable
             style={({ pressed }) => [styles.actionBtn, styles.actionOutline, pressed && styles.actionPressed]}
             onPress={handlePrint}>
-            <Ionicons name="print-outline" size={18} color={Colors.primary} />
+            <Ionicons name="newspaper-outline" size={18} color={Colors.primary} />
             <Text style={styles.actionOutlineText}>Imprimir</Text>
           </Pressable>
         </View>
