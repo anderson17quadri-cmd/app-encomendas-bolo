@@ -7,11 +7,28 @@ import { router, useLocalSearchParams, useFocusEffect, Stack } from 'expo-router
 import { Ionicons } from '@expo/vector-icons';
 import { useOrders } from '../../../context/OrdersContext';
 import { StatusChip } from '../../../components/StatusChip';
-import { Colors, Spacing, BorderRadius, STATUSES } from '../../../constants/theme';
+import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
 import { Order } from '../../../constants/types';
 import { printReceipt, printDirect } from '../../../services/receipt';
 
-const STATUS_ORDER = STATUSES;
+const SALGADOS_LABELS: Record<string, string> = {
+  coxinha: 'Coxinha',
+  rissoisCarne: 'Rissóis de Carne',
+  rissoisMistos: 'Rissóis Mistos',
+  bolinhsQueijo: 'Bolinhas de Queijo',
+  pastelFrango: 'Pastel de Frango',
+  pastelCarne: 'Pastel de Carne',
+  pastelPizza: 'Pastel de Pizza',
+  enroladinho: 'Enroladinho de Salsicha',
+  pastelBacalhau: 'Pastel de Bacalhau',
+};
+
+const BRIGADEIROS_LABELS: Record<string, string> = {
+  tradicional: 'Tradicional', beijinho: 'Beijinho', morango: 'Morango',
+  ninho: 'Ninho', churros: 'Churros', sensacao: 'Sensação',
+  seducao: 'Sedução', casadinho: 'Casadinho', prestigio: 'Prestígio',
+  oreo: 'Oreo', napolitano: 'Napolitano', cafe: 'Café',
+};
 
 function openContact(sourceChannel: string, clientPhone: string | null | undefined) {
   if (!clientPhone) { Alert.alert('Sem contato', 'Nenhum contato cadastrado.'); return; }
@@ -48,19 +65,12 @@ export default function DetalheEncomendaScreen() {
   useFocusEffect(useCallback(() => { loadOrder(); }, [loadOrder]));
 
   const handleDelete = () => {
-    Alert.alert('Excluir encomenda', 'Tem certeza que deseja excluir esta encomenda?', [
+    Alert.alert('Excluir encomenda', 'Tem certeza?', [
       { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir', style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteOrder(id);
-            router.back();
-          } catch (e) {
-            Alert.alert('Erro', 'Não foi possível excluir a encomenda.');
-          }
-        },
-      },
+      { text: 'Excluir', style: 'destructive', onPress: async () => {
+        try { await deleteOrder(id); router.back(); }
+        catch (e) { Alert.alert('Erro', 'Não foi possível excluir.'); }
+      }},
     ]);
   };
 
@@ -77,11 +87,6 @@ export default function DetalheEncomendaScreen() {
     const parts = dateStr.split('-');
     if (parts?.length !== 3) return dateStr;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  };
-
-  const formatWeight = (w: number | null | undefined) => {
-    if (w == null) return '0 kg';
-    return `${String(w).replace('.', ',')} kg`;
   };
 
   const formatMoney = (v: number | null | undefined) => {
@@ -119,7 +124,12 @@ export default function DetalheEncomendaScreen() {
   }
 
   const channelColor = Colors.channel?.[order?.sourceChannel ?? ''] ?? Colors.textSecondary;
-  const currentStatusIdx = STATUS_ORDER.indexOf(order?.status as typeof STATUS_ORDER[number]);
+  const tipo = order.orderType ?? 'bolo';
+
+  const salgadosEntries = Object.entries(order.salgados ?? {}).filter(([, qty]) => (qty ?? 0) > 0);
+  const brigadeirosEntries = Object.entries(order.brigadeiros ?? {}).filter(([, qty]) => (qty ?? 0) > 0);
+
+  const heroEmoji = tipo === 'salgados' ? '🥟' : tipo === 'brigadeiros' ? '🍫' : tipo === 'especial' ? '⭐' : '🎂';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,7 +152,7 @@ export default function DetalheEncomendaScreen() {
           </Pressable>
         ) : (
           <View style={styles.heroPlaceholder}>
-            <Text style={styles.heroEmoji}>🎂</Text>
+            <Text style={styles.heroEmoji}>{heroEmoji}</Text>
           </View>
         )}
 
@@ -170,24 +180,87 @@ export default function DetalheEncomendaScreen() {
             <Text style={styles.infoLabel}>Data de entrega</Text>
             <Text style={styles.infoValue}>{formatDate(order?.deliveryDate)}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🎂</Text>
-            <Text style={styles.infoLabel}>Tipo de massa</Text>
-            <Text style={styles.infoValue}>{order?.cakeType ?? ''}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🍰</Text>
-            <Text style={styles.infoLabel}>Recheio</Text>
-            <Text style={styles.infoValue}>{order?.filling ?? ''}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>⚖️</Text>
-            <Text style={styles.infoLabel}>Peso</Text>
-            <Text style={styles.infoValue}>{formatWeight(order?.weightKg)}</Text>
-          </View>
+
+          {/* BOLO */}
+          {tipo === 'bolo' && (
+            <>
+              {order.cakeType ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>🎂</Text>
+                  <Text style={styles.infoLabel}>Tipo de massa</Text>
+                  <Text style={styles.infoValue}>{order.cakeType}</Text>
+                </View>
+              ) : null}
+              {order.filling ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>🍰</Text>
+                  <Text style={styles.infoLabel}>Recheio</Text>
+                  <Text style={styles.infoValue}>{order.filling}</Text>
+                </View>
+              ) : null}
+              {order.weightKg > 0 ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>⚖️</Text>
+                  <Text style={styles.infoLabel}>Peso</Text>
+                  <Text style={styles.infoValue}>{String(order.weightKg).replace('.', ',')} kg</Text>
+                </View>
+              ) : null}
+              {order.topper ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>🎨</Text>
+                  <Text style={styles.infoLabel}>Topper / Hóstia</Text>
+                  <Text style={styles.infoValue}>{order.topper}</Text>
+                </View>
+              ) : null}
+              {order.hostia ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>📝</Text>
+                  <Text style={styles.infoLabel}>Descrição</Text>
+                  <Text style={styles.infoValue}>{order.hostia}</Text>
+                </View>
+              ) : null}
+            </>
+          )}
+
+          {/* SALGADOS */}
+          {tipo === 'salgados' && salgadosEntries.length > 0 && (
+            <>
+              <Text style={styles.subSectionTitle}>🥟 Salgados</Text>
+              {salgadosEntries.map(([key, qty]) => (
+                <View key={key} style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>•</Text>
+                  <Text style={styles.infoLabel}>{SALGADOS_LABELS[key] ?? key}</Text>
+                  <Text style={styles.infoValue}>x{qty}</Text>
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* BRIGADEIROS */}
+          {tipo === 'brigadeiros' && brigadeirosEntries.length > 0 && (
+            <>
+              <Text style={styles.subSectionTitle}>🍫 Brigadeiros</Text>
+              {brigadeirosEntries.map(([key, qty]) => (
+                <View key={key} style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>•</Text>
+                  <Text style={styles.infoLabel}>{BRIGADEIROS_LABELS[key] ?? key}</Text>
+                  <Text style={styles.infoValue}>x{qty}</Text>
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* ESPECIAL */}
+          {tipo === 'especial' && order.especial ? (
+            <>
+              <Text style={styles.subSectionTitle}>⭐ Encomenda Especial</Text>
+              <Text style={styles.notesText}>{order.especial}</Text>
+            </>
+          ) : null}
+
           {order?.price ? (
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>💰</Text>
+              <Text style={styles.infoIcon}>💶</Text>
               <Text style={styles.infoLabel}>Preço</Text>
               <Text style={[styles.infoValue, { color: Colors.primary }]}>{formatMoney(order.price)}</Text>
             </View>
@@ -197,26 +270,6 @@ export default function DetalheEncomendaScreen() {
 
           <Text style={styles.statusSectionTitle}>Status</Text>
           <StatusChip status={order?.status ?? 'Pendente'} large />
-
-          <View style={styles.progressRow}>
-            {STATUS_ORDER.map((s, idx) => {
-              const isFilled = idx <= currentStatusIdx;
-              const color = Colors.status?.[s] ?? Colors.textSecondary;
-              return (
-                <React.Fragment key={s}>
-                  <View style={[styles.progressDot, { backgroundColor: isFilled ? color : '#E0E0E0' }]} />
-                  {idx < STATUS_ORDER.length - 1 && (
-                    <View style={[styles.progressLine, { backgroundColor: idx < currentStatusIdx ? color : '#E0E0E0' }]} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </View>
-          <View style={styles.progressLabels}>
-            {STATUS_ORDER.map((s) => (
-              <Text key={s} style={styles.progressLabel} numberOfLines={1}>{s.split(' ')[0]}</Text>
-            ))}
-          </View>
 
           {order?.notes ? (
             <>
@@ -230,15 +283,13 @@ export default function DetalheEncomendaScreen() {
         <View style={styles.actionsRow}>
           <Pressable
             style={({ pressed }) => [styles.actionBtn, styles.actionOutline, pressed && styles.actionPressed]}
-            onPress={handleShare}
-          >
+            onPress={handleShare}>
             <Ionicons name="share-outline" size={18} color={Colors.primary} />
-            <Text style={styles.actionOutlineText}>Compartilhar</Text>
+            <Text style={styles.actionOutlineText}>Partilhar</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.actionBtn, styles.actionOutline, pressed && styles.actionPressed]}
-            onPress={handlePrint}
-          >
+            onPress={handlePrint}>
             <Ionicons name="print-outline" size={18} color={Colors.primary} />
             <Text style={styles.actionOutlineText}>Imprimir</Text>
           </Pressable>
@@ -280,7 +331,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   scrollContent: { paddingBottom: Spacing.xxl },
   heroImage: { width: '100%', height: 250 },
-  heroPlaceholder: { width: '100%', height: 180, backgroundColor: Colors.secondary, justifyContent: 'center', alignItems: 'center' },
+  heroPlaceholder: { width: '100%', height: 160, backgroundColor: Colors.secondary, justifyContent: 'center', alignItems: 'center' },
   heroEmoji: { fontSize: 64 },
   card: { backgroundColor: Colors.white, borderRadius: BorderRadius.lg, marginHorizontal: Spacing.md, marginTop: -Spacing.lg, padding: Spacing.lg, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4, borderWidth: 1, borderColor: Colors.border },
   clientName: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.sm },
@@ -291,12 +342,8 @@ const styles = StyleSheet.create({
   infoIcon: { fontSize: 18, width: 28 },
   infoLabel: { fontSize: 14, color: Colors.textSecondary, flex: 1 },
   infoValue: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
+  subSectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.sm, marginBottom: 4 },
   statusSectionTitle: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary, marginBottom: Spacing.sm },
-  progressRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md, paddingHorizontal: Spacing.xs },
-  progressDot: { width: 14, height: 14, borderRadius: 7 },
-  progressLine: { flex: 1, height: 3 },
-  progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  progressLabel: { fontSize: 10, color: Colors.textSecondary, textAlign: 'center', width: 60 },
   notesTitle: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary, marginBottom: 4 },
   notesText: { fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
   actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginHorizontal: Spacing.md, marginTop: Spacing.lg },
