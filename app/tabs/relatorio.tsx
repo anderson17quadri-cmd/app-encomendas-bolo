@@ -43,6 +43,7 @@ export default function RelatorioScreen() {
     if (novoMes < 1) { novoMes = 12; novoAno--; }
     setMes(novoMes);
     setAno(novoAno);
+    carregar();
   };
 
   const totalReceita = orders.reduce((acc, o) => acc + (o.price ?? 0), 0);
