@@ -266,10 +266,7 @@ export default function DetalheEncomendaScreen() {
             </View>
           ) : null}
 
-          <View style={styles.divider} />
-
-          <Text style={styles.statusSectionTitle}>Status</Text>
-          <StatusChip status={order?.status ?? 'Pendente'} large />
+          
 
           {order?.notes ? (
             <>
