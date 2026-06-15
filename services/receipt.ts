@@ -8,101 +8,87 @@ function formatDate(dateStr: string | null | undefined): string {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-function linha(label: string, valor: string, largura = 32): string {
-  const espaco = largura - label.length - valor.length;
-  if (espaco <= 0) return `${label}: ${valor}\n`;
-  return `${label}${' '.repeat(espaco)}${valor}\n`;
+const SALGADOS_LABELS: Record<string, string> = {
+  coxinha: 'Coxinha',
+  rissoisCarne: 'Rissois Carne',
+  rissoisMistos: 'Rissois Mistos',
+  bolinhsQueijo: 'Bol. Queijo',
+  pastelFrango: 'Pastel Frango',
+  pastelCarne: 'Pastel Carne',
+  pastelPizza: 'Pastel Pizza',
+  enroladinho: 'Enroladinho',
+  pastelBacalhau: 'Past. Bacalhau',
+};
+
+const BRIGADEIROS_LABELS: Record<string, string> = {
+  tradicional: 'Tradicional', beijinho: 'Beijinho',
+  morango: 'Morango', ninho: 'Ninho',
+  churros: 'Churros', sensacao: 'Sensacao',
+  seducao: 'Seducao', casadinho: 'Casadinho',
+  prestigio: 'Prestigio', oreo: 'Oreo',
+  napolitano: 'Napolitano', cafe: 'Cafe',
+};
+
+function campo(label: string, valor: string): string {
+  if (!valor || valor.trim() === '') return '';
+  return `${label}: ${valor}\n`;
 }
 
-function separador(char = '-', largura = 32): string {
-  return char.repeat(largura) + '\n';
-}
-
-function getSalgadosText(salgados: Record<string, number>): string {
-  const LABELS: Record<string, string> = {
-    coxinha: 'Coxinha',
-    rissoisCarne: 'Rissois Carne',
-    rissoisMistos: 'Rissois Mistos',
-    bolinhsQueijo: 'Bol. Queijo',
-    pastelFrango: 'Pastel Frango',
-    pastelCarne: 'Pastel Carne',
-    pastelPizza: 'Pastel Pizza',
-    enroladinho: 'Enroladinho',
-    pastelBacalhau: 'Past. Bacalhau',
-  };
-  return Object.entries(salgados)
-    .filter(([, qty]) => qty > 0)
-    .map(([key, qty]) => linha(LABELS[key] ?? key, `x${qty}`))
-    .join('');
-}
-
-function getBrigadeirosText(brigadeiros: Record<string, number>): string {
-  const LABELS: Record<string, string> = {
-    tradicional: 'Tradicional',
-    beijinho: 'Beijinho',
-    morango: 'Morango',
-    ninho: 'Ninho',
-    churros: 'Churros',
-    sensacao: 'Sensacao',
-    seducao: 'Seducao',
-    casadinho: 'Casadinho',
-    prestigio: 'Prestigio',
-    oreo: 'Oreo',
-    napolitano: 'Napolitano',
-    cafe: 'Cafe',
-  };
-  return Object.entries(brigadeiros)
-    .filter(([, qty]) => qty > 0)
-    .map(([key, qty]) => linha(LABELS[key] ?? key, `x${qty}`))
-    .join('');
+function sep(char = '-', n = 32): string {
+  return char.repeat(n) + '\n';
 }
 
 function generateReceiptText(order: Order | null | undefined): string {
   if (!order) return 'Encomenda nao encontrada';
 
   const tipo = order.orderType ?? 'bolo';
-  const salgados = (order.salgados ?? {}) as Record<string, number>;
-  const brigadeiros = (order.brigadeiros ?? {}) as Record<string, number>;
-
   let txt = '';
-  txt += '       SAL DOCE\n';
-  txt += '  Encomendas & Docinhos\n';
-  txt += separador('=');
-  txt += linha('Cliente', order.clientName ?? '');
-  txt += linha('Canal', order.sourceChannel ?? '');
-  txt += linha('Entrega', formatDate(order.deliveryDate));
-  txt += separador();
+
+  txt += '         SAL DOCE\n';
+  txt += '   Encomendas & Docinhos\n';
+  txt += sep('=');
+
+  txt += campo('Nome', order.clientName ?? '');
+  txt += campo('Telemovel', order.clientPhone ?? '');
+
+  if (order.sourceChannel === 'Instagram') {
+    txt += campo('Instagram', order.clientPhone ?? '');
+  } else if (order.sourceChannel === 'WhatsApp') {
+    txt += campo('WhatsApp', order.clientPhone ?? '');
+  }
+
+  txt += campo('Entrega', formatDate(order.deliveryDate));
+  txt += sep();
 
   if (tipo === 'bolo') {
-    txt += 'BOLO\n';
-    txt += linha('Massa', order.cakeType ?? '');
-    txt += linha('Recheio', order.filling ?? '');
-    txt += linha('Peso', `${String(order.weightKg ?? 0).replace('.', ',')} kg`);
+    txt += 'Bolo de Aniversario\n';
+    txt += campo('Massa', order.cakeType ?? '');
+    txt += campo('Recheio', order.filling ?? '');
+    if (order.weightKg > 0) txt += campo('Peso', `${String(order.weightKg).replace('.', ',')} kg`);
+    if (order.topper && order.topper !== 'Sem topper') txt += campo('Decoracao', order.topper);
+    if (order.hostia) txt += campo('Descricao', order.hostia);
   } else if (tipo === 'salgados') {
-    txt += 'SALGADOS\n';
-    txt += getSalgadosText(salgados);
-    const total = Object.values(salgados).reduce((a, b) => a + (b ?? 0), 0);
-    txt += linha('Total', `${total} unid.`);
+    txt += 'Salgados\n';
+    const s = (order.salgados ?? {}) as Record<string, number>;
+    Object.entries(s).filter(([, qty]) => qty > 0).forEach(([key, qty]) => {
+      txt += campo(SALGADOS_LABELS[key] ?? key, `x${qty}`);
+    });
   } else if (tipo === 'brigadeiros') {
-    txt += 'BRIGADEIROS\n';
-    txt += getBrigadeirosText(brigadeiros);
-    const total = Object.values(brigadeiros).reduce((a, b) => a + (b ?? 0), 0);
-    txt += linha('Total', `${total} unid.`);
+    txt += 'Brigadeiros\n';
+    const b = (order.brigadeiros ?? {}) as Record<string, number>;
+    Object.entries(b).filter(([, qty]) => qty > 0).forEach(([key, qty]) => {
+      txt += campo(BRIGADEIROS_LABELS[key] ?? key, `x${qty}`);
+    });
+  } else if (tipo === 'especial') {
+    txt += 'Especial\n';
+    txt += `${order.especial ?? ''}\n`;
   }
 
-  txt += separador();
-  if (order.price) {
-    txt += linha('PRECO TOTAL', `E${order.price.toFixed(2)}`);
-    txt += separador();
-  }
-  txt += linha('Status', order.status ?? 'Pendente');
-  if (order.notes) {
-    txt += separador();
-    txt += 'Obs:\n';
-    txt += `${order.notes}\n`;
-  }
-  txt += separador('=');
-  txt += '     Obrigado pela preferencia!\n';
+  txt += sep();
+  if (order.price) txt += campo('Preco', `€ ${order.price.toFixed(2).replace('.', ',')}`);
+  if (order.notes) txt += campo('Observacao', order.notes);
+  txt += sep('=');
+  txt += '  Obrigado pela preferencia!\n';
   txt += `  ${new Date().toLocaleDateString('pt-PT')}\n`;
 
   return txt;
@@ -118,11 +104,12 @@ export function generateReceiptHTML(order: Order | null | undefined): string {
   * { margin: 0; padding: 0; }
   body {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 12px;
+    font-size: 13px;
     width: 58mm;
-    padding: 4mm;
+    padding: 4mm 3mm;
     background: white;
     color: black;
+    line-height: 1.6;
   }
   pre { white-space: pre-wrap; word-break: break-word; }
 </style>
@@ -145,7 +132,7 @@ export async function printReceipt(order: Order | null | undefined): Promise<voi
   try {
     const { uri } = await Print.printToFileAsync({ html });
     const ok = await Sharing.isAvailableAsync();
-    if (ok) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Compartilhar recibo' });
+    if (ok) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Partilhar recibo' });
   } catch (e) { console.error('Error printing receipt:', e); }
 }
 

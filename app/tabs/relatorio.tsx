@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ function getOrderSubtitle(o: Order): string {
     const total = Object.values(o.brigadeiros ?? {}).reduce((a, b) => a + (b ?? 0), 0);
     return `🍫 Brigadeiros • ${total} unid.`;
   }
+  if (o.orderType === 'especial') return `⭐ Especial`;
   return `🎂 ${o.cakeType ?? ''} • ${o.weightKg ?? 0}kg`;
 }
 
@@ -27,14 +28,15 @@ export default function RelatorioScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const carregar = useCallback(async () => {
-    setLoading(true);
-    const data = await getOrdersByMonth(ano, mes);
-    setOrders(data ?? []);
-    setLoading(false);
+  useEffect(() => {
+    const carregar = async () => {
+      setLoading(true);
+      const data = await getOrdersByMonth(ano, mes);
+      setOrders(data ?? []);
+      setLoading(false);
+    };
+    carregar();
   }, [ano, mes]);
-
-  useEffect(() => { carregar(); }, [carregar]);
 
   const navMes = (dir: number) => {
     let novoMes = mes + dir;
@@ -43,7 +45,6 @@ export default function RelatorioScreen() {
     if (novoMes < 1) { novoMes = 12; novoAno--; }
     setMes(novoMes);
     setAno(novoAno);
-    carregar();
   };
 
   const totalReceita = orders.reduce((acc, o) => acc + (o.price ?? 0), 0);
@@ -74,7 +75,6 @@ export default function RelatorioScreen() {
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-
           <View style={styles.cardsRow}>
             <View style={styles.card}>
               <Text style={styles.cardIcon}>🎂</Text>
@@ -125,7 +125,6 @@ export default function RelatorioScreen() {
               ))}
             </View>
           )}
-
         </ScrollView>
       )}
     </SafeAreaView>
