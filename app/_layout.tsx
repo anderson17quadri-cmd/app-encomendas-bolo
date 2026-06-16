@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { Platform } from 'react-native';
 import { OrdersProvider } from '../context/OrdersContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { requestNotificationPermission } from '../services/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -14,10 +14,7 @@ export default function RootLayout() {
   useEffect(() => {
     async function init() {
       try {
-        if (Platform.OS !== 'web') {
-          const { requestNotificationPermission } = await import('../services/notifications');
-          await requestNotificationPermission();
-        }
+        await requestNotificationPermission();
       } catch (e) {
         console.error('Init error:', e);
       } finally {
