@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import * as db from '../services/database';
 import { Order, MarkedDates } from '../constants/types';
 import { Colors } from '../constants/theme';
+import { scheduleDeliveryReminder, cancelOrderNotification } from '../services/notifications';
 
 interface OrdersContextType {
   orders: Order[];
@@ -36,51 +37,58 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getOrdersByDate = useCallback(async (date: string) => {
-    try {
-      return await db.getOrdersByDate(date);
-    } catch (e) {
-      console.error('Error getting orders by date:', e);
-      return [];
-    }
+    try { return await db.getOrdersByDate(date); }
+    catch (e) { console.error('Error getting orders by date:', e); return []; }
   }, []);
 
   const getOrderById = useCallback(async (id: string) => {
-    try {
-      return await db.getOrderById(id);
-    } catch (e) {
-      console.error('Error getting order:', e);
-      return null;
-    }
+    try { return await db.getOrderById(id); }
+    catch (e) { console.error('Error getting order:', e); return null; }
   }, []);
 
   const createOrder = useCallback(async (data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = await db.createOrder(data);
+    // Agendar notificação de lembrete
+    try {
+      await scheduleDeliveryReminder(id, data.clientName, data.deliveryDate);
+    } catch (e) {
+      console.warn('Notification scheduling failed:', e);
+    }
     await refreshOrders();
     return id;
   }, [refreshOrders]);
 
   const updateOrder = useCallback(async (id: string, data: Partial<Omit<Order, 'id' | 'createdAt'>>) => {
     await db.updateOrder(id, data);
+    // Re-agendar notificação se data mudou
+    if (data.deliveryDate && data.clientName) {
+      try {
+        await scheduleDeliveryReminder(id, data.clientName, data.deliveryDate);
+      } catch (e) {
+        console.warn('Notification rescheduling failed:', e);
+      }
+    }
     await refreshOrders();
   }, [refreshOrders]);
 
   const updateOrderStatus = useCallback(async (id: string, status: string) => {
     await db.updateOrderStatus(id, status);
+    // Cancelar notificação se entregue
+    if (status === 'Entregue') {
+      try { await cancelOrderNotification(id); } catch (e) {}
+    }
     await refreshOrders();
   }, [refreshOrders]);
 
   const deleteOrder = useCallback(async (id: string) => {
     await db.deleteOrder(id);
+    try { await cancelOrderNotification(id); } catch (e) {}
     await refreshOrders();
   }, [refreshOrders]);
 
   const searchOrders = useCallback(async (query: string, statusFilter: string, dateFrom?: string, dateTo?: string) => {
-    try {
-      return await db.searchOrders(query, statusFilter, dateFrom, dateTo);
-    } catch (e) {
-      console.error('Error searching orders:', e);
-      return [];
-    }
+    try { return await db.searchOrders(query, statusFilter, dateFrom, dateTo); }
+    catch (e) { console.error('Error searching orders:', e); return []; }
   }, []);
 
   const getMarkedDates = useCallback(async (): Promise<MarkedDates> => {
@@ -90,9 +98,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       for (const item of data ?? []) {
         const date = item?.deliveryDate;
         if (!date) continue;
-        if (!marked[date]) {
-          marked[date] = { dots: [] };
-        }
+        if (!marked[date]) marked[date] = { dots: [] };
         const statusColor = Colors.status?.[item?.status ?? ''] ?? Colors.primary;
         const dots = marked[date]?.dots ?? [];
         if (dots.length < 3) {
@@ -108,21 +114,11 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <OrdersContext.Provider
-      value={{
-        orders,
-        loading,
-        refreshOrders,
-        getOrdersByDate,
-        getOrderById,
-        createOrder,
-        updateOrder,
-        updateOrderStatus,
-        deleteOrder,
-        searchOrders,
-        getMarkedDates,
-      }}
-    >
+    <OrdersContext.Provider value={{
+      orders, loading, refreshOrders, getOrdersByDate, getOrderById,
+      createOrder, updateOrder, updateOrderStatus, deleteOrder,
+      searchOrders, getMarkedDates,
+    }}>
       {children}
     </OrdersContext.Provider>
   );
@@ -130,8 +126,6 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
 export function useOrders(): OrdersContextType {
   const context = useContext(OrdersContext);
-  if (!context) {
-    throw new Error('useOrders must be used within OrdersProvider');
-  }
+  if (!context) throw new Error('useOrders must be used within OrdersProvider');
   return context;
 }

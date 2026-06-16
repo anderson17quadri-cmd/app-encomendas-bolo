@@ -5,7 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { OrdersProvider } from '../context/OrdersContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Colors } from '../constants/theme';
-import { getDatabase } from '../services/database';
+import { requestNotificationPermission } from '../services/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -15,9 +15,9 @@ export default function RootLayout() {
   useEffect(() => {
     async function init() {
       try {
-        await getDatabase();
+        await requestNotificationPermission();
       } catch (e) {
-        console.error('DB init error:', e);
+        console.error('Init error:', e);
       } finally {
         setReady(true);
         SplashScreen.hideAsync();
@@ -25,7 +25,6 @@ export default function RootLayout() {
     }
     init();
 
-    // Safety timeout
     const timeout = setTimeout(() => {
       setReady(true);
       SplashScreen.hideAsync();
