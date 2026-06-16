@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { OrdersProvider } from '../context/OrdersContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { requestNotificationPermission } from '../services/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -14,10 +13,10 @@ export default function RootLayout() {
   useEffect(() => {
     async function init() {
       try {
-        await requestNotificationPermission();
+        setReady(true);
+        SplashScreen.hideAsync();
       } catch (e) {
         console.error('Init error:', e);
-      } finally {
         setReady(true);
         SplashScreen.hideAsync();
       }
