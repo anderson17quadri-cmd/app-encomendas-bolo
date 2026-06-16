@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import * as db from '../services/database';
 import { Order, MarkedDates } from '../constants/types';
 import { Colors } from '../constants/theme';
-import { scheduleDeliveryReminder, cancelOrderNotification } from '../services/notifications';
+import { Platform } from 'react-native';
 
 interface OrdersContextType {
   orders: Order[];
@@ -48,11 +48,11 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
   const createOrder = useCallback(async (data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = await db.createOrder(data);
-    // Agendar notificação de lembrete
-    try {
-      await scheduleDeliveryReminder(id, data.clientName, data.deliveryDate);
-    } catch (e) {
-      console.warn('Notification scheduling failed:', e);
+    if (Platform.OS !== 'web') {
+      try {
+        const { scheduleDeliveryReminder } = await import('../services/notifications');
+        await scheduleDeliveryReminder(id, data.clientName, data.deliveryDate);
+      } catch (e) { console.warn('Notification failed:', e); }
     }
     await refreshOrders();
     return id;
@@ -60,13 +60,11 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
   const updateOrder = useCallback(async (id: string, data: Partial<Omit<Order, 'id' | 'createdAt'>>) => {
     await db.updateOrder(id, data);
-    // Re-agendar notificação se data mudou
-    if (data.deliveryDate && data.clientName) {
+    if (Platform.OS !== 'web' && data.deliveryDate && data.clientName) {
       try {
+        const { scheduleDeliveryReminder } = await import('../services/notifications');
         await scheduleDeliveryReminder(id, data.clientName, data.deliveryDate);
-      } catch (e) {
-        console.warn('Notification rescheduling failed:', e);
-      }
+      } catch (e) { console.warn('Notification failed:', e); }
     }
     await refreshOrders();
   }, [refreshOrders]);
@@ -74,15 +72,23 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const updateOrderStatus = useCallback(async (id: string, status: string) => {
     await db.updateOrderStatus(id, status);
     // Cancelar notificação se entregue
-    if (status === 'Entregue') {
-      try { await cancelOrderNotification(id); } catch (e) {}
+    if (Platform.OS !== 'web' && status === 'Entregue') {
+      try {
+        const { cancelOrderNotification } = await import('../services/notifications');
+        await cancelOrderNotification(id);
+      } catch (e) {}
     }
     await refreshOrders();
   }, [refreshOrders]);
 
   const deleteOrder = useCallback(async (id: string) => {
     await db.deleteOrder(id);
-    try { await cancelOrderNotification(id); } catch (e) {}
+    if (Platform.OS !== 'web') {
+      try {
+        const { cancelOrderNotification } = await import('../services/notifications');
+        await cancelOrderNotification(id);
+      } catch (e) {}
+    }
     await refreshOrders();
   }, [refreshOrders]);
 
