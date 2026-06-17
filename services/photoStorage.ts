@@ -3,37 +3,41 @@ import { supabase } from './supabase';
 
 export async function photoToBase64(uri: string): Promise<string | null> {
   try {
-    const fileName = `cake_${Date.now()}.jpg`;
+    // Se já é uma URL do Supabase, retorna como está
+    if (uri.startsWith('http')) return uri;
 
+    const fileName = `cake_${Date.now()}.jpg`;
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
 
-    const { error } = await supabase.storage
+    // Converte base64 para ArrayBuffer
+    const binaryStr = atob(base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    const { data, error } = await supabase.storage
       .from('photos')
-      .upload(fileName, decode(base64), {
+      .upload(fileName, bytes.buffer, {
         contentType: 'image/jpeg',
-        upsert: false,
+        upsert: true,
       });
 
     if (error) {
-      console.error('Upload error:', error);
+      console.error('Upload error:', JSON.stringify(error));
       return null;
     }
 
-    const { data } = supabase.storage.from('photos').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data: urlData } = supabase.storage
+      .from('photos')
+      .getPublicUrl(fileName);
+
+    console.log('Photo uploaded:', urlData.publicUrl);
+    return urlData.publicUrl;
   } catch (e) {
     console.error('photoStorage error:', e);
     return null;
   }
-}
-
-function decode(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
 }
