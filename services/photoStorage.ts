@@ -1,33 +1,43 @@
 import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
+import Constants from 'expo-constants';
+
+function getSupabaseUrl(): string {
+  return process.env.EXPO_PUBLIC_SUPABASE_URL ??
+    Constants.expoConfig?.extra?.supabaseUrl ?? '';
+}
+
+function getSupabaseKey(): string {
+  return process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+    Constants.expoConfig?.extra?.supabaseAnonKey ?? '';
+}
 
 export async function photoToBase64(uri: string): Promise<string | null> {
   try {
     if (uri.startsWith('http')) return uri;
 
     const fileName = `cake_${Date.now()}.jpg`;
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseKey = getSupabaseKey();
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/photos/${fileName}`;
 
-    // Usa fetch para ler o ficheiro como blob — funciona no React Native
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    const result = await FileSystem.uploadAsync(uploadUrl, uri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'image/jpeg',
+        'x-upsert': 'true',
+      },
+    });
 
-    const { data, error } = await supabase.storage
-      .from('photos')
-      .upload(fileName, blob, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-
-    if (error) {
-      console.error('Upload error:', JSON.stringify(error));
+    if (result.status !== 200 && result.status !== 201) {
+      console.error('Upload failed:', result.status, result.body);
       return null;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('photos')
-      .getPublicUrl(fileName);
-
-    return urlData.publicUrl;
+    const { data } = supabase.storage.from('photos').getPublicUrl(fileName);
+    return data.publicUrl;
   } catch (e) {
     console.error('photoStorage error:', e);
     return null;
