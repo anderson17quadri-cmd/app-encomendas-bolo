@@ -3,24 +3,17 @@ import { supabase } from './supabase';
 
 export async function photoToBase64(uri: string): Promise<string | null> {
   try {
-    // Se já é uma URL do Supabase, retorna como está
     if (uri.startsWith('http')) return uri;
 
     const fileName = `cake_${Date.now()}.jpg`;
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
 
-    // Converte base64 para ArrayBuffer
-    const binaryStr = atob(base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
+    // Usa fetch para ler o ficheiro como blob — funciona no React Native
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
     const { data, error } = await supabase.storage
       .from('photos')
-      .upload(fileName, bytes.buffer, {
+      .upload(fileName, blob, {
         contentType: 'image/jpeg',
         upsert: true,
       });
@@ -34,7 +27,6 @@ export async function photoToBase64(uri: string): Promise<string | null> {
       .from('photos')
       .getPublicUrl(fileName);
 
-    console.log('Photo uploaded:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (e) {
     console.error('photoStorage error:', e);
