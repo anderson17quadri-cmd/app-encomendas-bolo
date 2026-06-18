@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system';
-import { supabase } from './supabase';
 import Constants from 'expo-constants';
 
 function getSupabaseUrl(): string {
@@ -19,11 +18,11 @@ export async function photoToBase64(uri: string): Promise<string | null> {
     const fileName = `cake_${Date.now()}.jpg`;
     const supabaseUrl = getSupabaseUrl();
     const supabaseKey = getSupabaseKey();
-    const uploadUrl = `${supabaseUrl}/storage/v1/object/photos/${fileName}`;
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/Photos/${fileName}`;
 
     const result = await FileSystem.uploadAsync(uploadUrl, uri, {
       httpMethod: 'POST',
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      uploadType: 1,
       headers: {
         'Authorization': `Bearer ${supabaseKey}`,
         'Content-Type': 'image/jpeg',
@@ -36,8 +35,8 @@ export async function photoToBase64(uri: string): Promise<string | null> {
       return null;
     }
 
-    const { data } = supabase.storage.from('photos').getPublicUrl(fileName);
-    return data.publicUrl;
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/Photos/${fileName}`;
+    return publicUrl;
   } catch (e) {
     console.error('photoStorage error:', e);
     return null;
