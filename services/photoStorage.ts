@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 
 function getSupabaseUrl(): string {
@@ -22,7 +22,7 @@ export async function photoToBase64(uri: string): Promise<string | null> {
 
     const result = await FileSystem.uploadAsync(uploadUrl, uri, {
       httpMethod: 'POST',
-      uploadType: 1,
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
       headers: {
         'Authorization': `Bearer ${supabaseKey}`,
         'Content-Type': 'image/jpeg',
