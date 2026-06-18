@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import * as db from '../services/database';
+import { upsertClient } from '../services/clients';
 import { Order, MarkedDates } from '../constants/types';
 import { Colors } from '../constants/theme';
 import { Platform } from 'react-native';

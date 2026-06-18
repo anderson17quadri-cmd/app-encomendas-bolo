@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { photoToBase64 } from '../services/photoStorage';
 import { supabase } from '../services/supabase';
+import { searchClients, Client } from '../services/clients';
 import { useOrders } from '../context/OrdersContext';
 import { PickerModal } from '../components/PickerModal';
 import { Colors, Spacing, BorderRadius, CHANNELS } from '../constants/theme';
