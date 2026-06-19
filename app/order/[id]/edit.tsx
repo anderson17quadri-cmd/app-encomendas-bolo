@@ -52,6 +52,8 @@ export default function EditarEncomendaScreen() {
   const [salgados, setSalgados] = useState<SalgadosQty>({});
   const [brigadeiros, setBrigadeiros] = useState<BrigadeirosQty>({});
   const [dia, setDia] = useState('');
+  const [hora, setHora] = useState('');
+  const [minuto, setMinuto] = useState('');
   const [mes, setMes] = useState('');
   const [ano, setAno] = useState('');
   const [form, setForm] = useState({
@@ -77,6 +79,9 @@ export default function EditarEncomendaScreen() {
         if (o) {
           const parts = (o.deliveryDate ?? '').split('-');
           setDia(parts[2] ?? '');
+          const timeParts = (o.deliveryTime ?? '').split(':');
+          setHora(timeParts[0] ?? '');
+          setMinuto(timeParts[1] ?? '');
           setMes(parts[1] ?? '');
           setAno(parts[0] ?? '');
           setOrderType((o.orderType ?? 'bolo') as any);
@@ -163,6 +168,7 @@ export default function EditarEncomendaScreen() {
         photoUri,
         sourceChannel: form.sourceChannel,
         notes: form.notes?.trim() || null,
+      deliveryTime: hora && minuto ? hora.padStart(2,'0') + ':' + minuto.padStart(2,'0') : null,
         status: form.status,
       });
       router.back();
@@ -365,6 +371,23 @@ export default function EditarEncomendaScreen() {
             </View>
           </View>
           {errors.deliveryDate ? <Text style={styles.errorText}>{errors.deliveryDate}</Text> : null}
+
+          <Text style={styles.label}>Hora de entrega</Text>
+          <View style={styles.dateRow}>
+            <View style={styles.dateBox}>
+              <TextInput style={styles.dateInput} placeholder="HH"
+                placeholderTextColor={Colors.textSecondary}
+                value={hora} onChangeText={(t) => setHora(t.replace(/D/g,'').slice(0,2))}
+                keyboardType="numeric" maxLength={2} textAlign="center" />
+            </View>
+            <Text style={styles.dateSep}>:</Text>
+            <View style={styles.dateBox}>
+              <TextInput style={styles.dateInput} placeholder="MM"
+                placeholderTextColor={Colors.textSecondary}
+                value={minuto} onChangeText={(t) => setMinuto(t.replace(/D/g,'').slice(0,2))}
+                keyboardType="numeric" maxLength={2} textAlign="center" />
+            </View>
+          </View>
 
           <Text style={styles.label}>Status</Text>
           <Pressable style={styles.selectButton}

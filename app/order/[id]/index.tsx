@@ -198,7 +198,14 @@ export default function DetalheEncomendaScreen() {
                   <Text style={styles.infoValue}>{order.filling}</Text>
                 </View>
               ) : null}
-              {order.weightKg > 0 ? (
+              {order.deliveryTime ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>🕐</Text>
+              <Text style={styles.infoLabel}>Hora de entrega</Text>
+              <Text style={styles.infoValue}>{order.deliveryTime}</Text>
+            </View>
+          ) : null}
+          {order.weightKg > 0 ? (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoIcon}>⚖️</Text>
                   <Text style={styles.infoLabel}>Peso</Text>
