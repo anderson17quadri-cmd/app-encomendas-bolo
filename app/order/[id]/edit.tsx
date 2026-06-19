@@ -389,12 +389,6 @@ export default function EditarEncomendaScreen() {
             </View>
           </View>
 
-          <Text style={styles.label}>Status</Text>
-          <Pressable style={styles.selectButton}
-            onPress={() => setPickerModal({ field: 'status', title: 'Status', options: [...STATUSES] })}>
-            <Text style={styles.selectText}>{form.status}</Text>
-            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
-          </Pressable>
 
           <Text style={styles.sectionTitle}>Foto</Text>
           {form.photoUri ? (
