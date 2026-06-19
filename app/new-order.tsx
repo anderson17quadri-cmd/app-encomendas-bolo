@@ -78,13 +78,15 @@ export default function NovaEncomendaScreen() {
   const [dia, setDia] = useState(initial.dia);
   const [mes, setMes] = useState(initial.mes);
   const [ano, setAno] = useState(initial.ano);
+  const [hora, setHora] = useState('');
+  const [minuto, setMinuto] = useState('');
 
   const [form, setForm] = useState<OrderFormData>({
     clientName: paramClientName ?? '', clientPhone: paramClientPhone ?? '', deliveryDate: '',
     orderType: 'bolo', cakeType: '', filling: '',
     weightKg: '', topper: 'Sem topper', hostia: '',
     especial: '', salgados: {}, brigadeiros: {},
-    price: '', photoUri: null, sourceChannel: paramSourceChannel || 'WhatsApp', notes: '',
+    price: '', photoUri: null, sourceChannel: paramSourceChannel || 'WhatsApp', notes: '', deliveryTime: '',
   });
 
   useEffect(() => {
@@ -167,6 +169,7 @@ export default function NovaEncomendaScreen() {
         photoUri,
         sourceChannel: form.sourceChannel,
         notes: form.notes?.trim() || null,
+        deliveryTime: hora && minuto ? hora.padStart(2,'0') + ':' + minuto.padStart(2,'0') : null,
         status: 'Pendente',
       });
       router.back();
@@ -403,6 +406,23 @@ export default function NovaEncomendaScreen() {
             </View>
           </View>
           {errors.deliveryDate ? <Text style={styles.errorText}>{errors.deliveryDate}</Text> : null}
+
+          <Text style={styles.label}>Hora de entrega</Text>
+          <View style={styles.dateRow}>
+            <View style={styles.dateBox}>
+              <TextInput style={styles.dateInput} placeholder="HH"
+                placeholderTextColor={Colors.textSecondary}
+                value={hora} onChangeText={(t) => setHora(t.replace(/D/g,'').slice(0,2))}
+                keyboardType="numeric" maxLength={2} textAlign="center" />
+            </View>
+            <Text style={styles.dateSep}>:</Text>
+            <View style={styles.dateBox}>
+              <TextInput style={styles.dateInput} placeholder="MM"
+                placeholderTextColor={Colors.textSecondary}
+                value={minuto} onChangeText={(t) => setMinuto(t.replace(/D/g,'').slice(0,2))}
+                keyboardType="numeric" maxLength={2} textAlign="center" />
+            </View>
+          </View>
 
           <Text style={styles.sectionTitle}>Foto</Text>
           {form.photoUri ? (

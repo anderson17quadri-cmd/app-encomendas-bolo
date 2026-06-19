@@ -42,8 +42,10 @@ export interface Order {
   price: number;
   photoUri: string | null;
   sourceChannel: string;
+  deliveryTime: string;
   notes: string | null;
   status: string;
+  deliveryTime: string | null;
   createdAt: string;
   updatedAt: string;
 }
