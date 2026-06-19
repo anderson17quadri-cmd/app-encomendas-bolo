@@ -57,7 +57,7 @@ function generateReceiptText(order: Order | null | undefined): string {
     txt += campo('WhatsApp', order.clientPhone ?? '');
   }
 
-  txt += campo('Entrega', formatDate(order.deliveryDate));
+  txt += campo('Entrega', formatDate(order.deliveryDate) + (order.deliveryTime ? ' às ' + order.deliveryTime : ''));
   txt += sep();
 
   if (tipo === 'bolo') {
