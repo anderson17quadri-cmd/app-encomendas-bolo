@@ -44,7 +44,7 @@ const BRIGADEIROS_LIST = [
 const TOPPER_OPTIONS = ['Sem topper', 'Topper personalizado', 'Hóstia comestível', 'Topper + Hóstia'];
 
 export default function NovaEncomendaScreen() {
-  const { date = '' } = useLocalSearchParams<{ date?: string }>();
+  const { date = '', clientName: paramClientName = '', clientPhone: paramClientPhone = '', sourceChannel: paramSourceChannel = '' } = useLocalSearchParams<{ date?: string; clientName?: string; clientPhone?: string; sourceChannel?: string }>();
   const { createOrder } = useOrders();
 
   const [cakeTypes, setCakeTypes] = useState<string[]>([]);
@@ -80,11 +80,11 @@ export default function NovaEncomendaScreen() {
   const [ano, setAno] = useState(initial.ano);
 
   const [form, setForm] = useState<OrderFormData>({
-    clientName: '', clientPhone: '', deliveryDate: '',
+    clientName: paramClientName ?? '', clientPhone: paramClientPhone ?? '', deliveryDate: '',
     orderType: 'bolo', cakeType: '', filling: '',
     weightKg: '', topper: 'Sem topper', hostia: '',
     especial: '', salgados: {}, brigadeiros: {},
-    price: '', photoUri: null, sourceChannel: 'WhatsApp', notes: '',
+    price: '', photoUri: null, sourceChannel: paramSourceChannel || 'WhatsApp', notes: '',
   });
 
   useEffect(() => {
